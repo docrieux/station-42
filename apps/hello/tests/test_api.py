@@ -8,7 +8,8 @@ def test_healthz():
     assert client.get("/healthz").json() == {"status": "ok"}
 
 
-def test_index():
-    body = client.get("/").json()
+def test_api_info():
+    body = client.get("/api/").json()
     assert body["service"] == "hello"
-    assert "message" in body
+    assert body["message"]
+    assert "machine" in body

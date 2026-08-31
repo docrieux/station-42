@@ -13,13 +13,21 @@ just new-app notes
 This copies `_template/`, substitutes the name, registers the workspace member,
 and prints the compose + Caddy snippets to paste in.
 
+> **Standards:** [`apps/CLAUDE.md`](CLAUDE.md) is the contract for building an app
+> — the dual-UI route split (`/` `/d/` `/m/` `/api/`), layout, tests, Dockerfile
+> rules. Rationale: [`docs/dual-ui.md`](../docs/dual-ui.md).
+
 ## Anatomy of an app
 
 | Path | Purpose |
 |------|---------|
 | `pyproject.toml` | Dependencies. `station-common` is always included. |
-| `src/<name>/main.py` | FastAPI `app`. Mounts `health_router`, calls `configure_logging`. |
-| `tests/test_main.py` | `pytest` + `TestClient`. Run with `just test`. |
+| `src/<name>/settings.py` | `Settings(BaseAppSettings)` + a `settings` instance. `api.py`/`ui.py` import it from here. |
+| `src/<name>/api.py` | `make_api_router()` → `APIRouter(prefix="/api")`, plus the shared logic function. |
+| `src/<name>/ui.py` | `make_ui_router(desktop, mobile)` → the `/d/` and `/m/` handlers. |
+| `src/<name>/main.py` | FastAPI `app`: `configure_logging`, `health_router`, the API router, `mount_dual_ui`, the UI router. |
+| `src/<name>/web/` | `static/` (→ `/static`) + `templates/{shared,desktop,mobile}/`. |
+| `tests/test_api.py`, `tests/test_ui.py` | `pytest` + `TestClient`. Run with `just test`. |
 | `Dockerfile` | Multi-stage build. **Build context is the repo root.** |
 
 ## Local dev loop (no container)

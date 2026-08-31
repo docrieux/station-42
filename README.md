@@ -39,13 +39,13 @@ compose.yaml            single source of truth for the running stack
 apps/                   custom Python services (uv workspace members)
   _template/            copied by `just new-app`
   hello/                worked example
-packages/station_common shared settings / logging / health helpers
+packages/station_common shared settings / logging / health / dual-UI helpers
 services/               notes + data for off-the-shelf images (pihole, ...)
 infra/
   caddy/                reverse proxy image + Caddyfile
   tailscale/            host VPN setup notes
   scripts/              bootstrap-pi · deploy · backup · new-app
-docs/                   architecture · adding a tool · remote access · operations
+docs/                   architecture · adding a tool · remote access · operations · dual UI
 ```
 
 ## Quick start
@@ -92,6 +92,16 @@ just new-app notes # scaffold a new app
   Caddyfile.
 
 Step by step: [`docs/adding-a-tool.md`](docs/adding-a-tool.md).
+
+## Conventions & standards
+
+Working rules for this repo live in `CLAUDE.md` files, one per area
+([root](CLAUDE.md), [`apps/`](apps/CLAUDE.md),
+[`packages/station_common/`](packages/station_common/CLAUDE.md),
+[`infra/caddy/`](infra/caddy/CLAUDE.md), [`services/`](services/CLAUDE.md),
+[`infra/scripts/`](infra/scripts/CLAUDE.md)). Read the root one before making
+changes. Every custom app ships a **separate desktop and mobile UI** — see
+[`docs/dual-ui.md`](docs/dual-ui.md).
 
 ## Setting up the Pi from scratch
 
@@ -244,7 +254,7 @@ That's the only per-device step.
 From a device on Tailscale (try a phone on cellular — proves "from anywhere"):
 
 ```
-https://hello.user-pi.duckdns.org      → {"service":"hello",…} + valid padlock
+https://hello.user-pi.duckdns.org      → the hello page (raw JSON at /api/) + valid padlock
 https://pihole.user-pi.duckdns.org     → Pi-hole admin login
 ```
 
@@ -285,5 +295,3 @@ pi$ cd station-42 && ./infra/scripts/deploy.sh     # pull + rebuild + restart
 ```
 
 Troubleshooting table: [`docs/remote-access.md`](docs/remote-access.md).
-#   s t a t i o n - 4 2  
- 

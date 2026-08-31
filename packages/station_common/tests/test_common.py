@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from station_common import BaseAppSettings, configure_logging, health_router
+from station_common.web import is_mobile
 
 
 def test_health_router_returns_ok():
@@ -32,3 +33,10 @@ def test_base_settings_reads_environment(monkeypatch):
     settings = BaseAppSettings()
 
     assert settings.log_level == "DEBUG"
+
+
+def test_is_mobile():
+    assert is_mobile("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)")
+    assert is_mobile("Mozilla/5.0 (Linux; Android 14) Mobile Safari/537.36")
+    assert not is_mobile("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36")
+    assert not is_mobile("")

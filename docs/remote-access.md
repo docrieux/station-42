@@ -56,7 +56,8 @@ just logs caddy      # watch for: certificate obtained successfully
 
 From a phone on cellular (proves "from anywhere"):
 
-- `https://hello.yourname.duckdns.org` → JSON, valid padlock.
+- `https://hello.yourname.duckdns.org` → the hello page (desktop or mobile,
+  raw JSON at `/api/`), valid padlock.
 - `https://pihole.yourname.duckdns.org/admin` → Pi-hole login.
 - Turn Tailscale **off** on the phone → the sites stop loading. That is correct:
   they are not on the public internet.

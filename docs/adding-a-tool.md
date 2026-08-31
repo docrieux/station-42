@@ -17,14 +17,23 @@ Creates `apps/notes/` from the template, wires it into the uv workspace, runs
 
 ### 2. Write it
 
-Edit `apps/notes/src/notes/main.py`. Keep the two shared bits:
+Follow the app contract in [`apps/CLAUDE.md`](../apps/CLAUDE.md): put logic in
+`api.py` under `/api`, desktop templates in `web/templates/desktop/`, mobile in
+`web/templates/mobile/`, and wire it in `main.py`:
 
 ```python
 from station_common import configure_logging, health_router
+from station_common.web import mount_dual_ui
 
 configure_logging(settings.log_level)
-app.include_router(health_router)  # gives you /healthz
+app.include_router(health_router)  # /healthz
+app.include_router(make_api_router())  # /api/...
+desktop, mobile = mount_dual_ui(app, "notes")  # / redirect + /static
+app.include_router(make_ui_router(desktop, mobile))  # /d/ and /m/
 ```
+
+`hello/` is the worked example — copy its shape. Rationale for the
+desktop/mobile split: [`docs/dual-ui.md`](dual-ui.md).
 
 Add dependencies to `apps/notes/pyproject.toml`, then `uv sync`.
 

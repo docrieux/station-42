@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block variant %}mobile{% endblock %}
+{% block body %}
+  <h1>Station 42</h1>
+  <p class="big">{{ info.message }}</p>
+  <ul>
+    <li><span>host</span><strong>{{ info.host }}</strong></li>
+    <li><span>machine</span><strong>{{ info.machine }}</strong></li>
+  </ul>
+  <p class="links"><a href="/d/">Desktop site &rarr;</a></p>
+{% endblock %}
