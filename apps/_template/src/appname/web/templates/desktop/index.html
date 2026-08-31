@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block variant %}desktop{% endblock %}
+{% block body %}
+  <h1>appname</h1>
+  <p class="lead">{{ info.message }}</p>
+  <table>
+    <tr><th>service</th><td>{{ info.service }}</td></tr>
+  </table>
+  <p class="links">
+    <a href="/m/">Open the mobile site &rarr;</a>
+    &nbsp;·&nbsp;
+    <a href="/api/">Raw JSON</a>
+  </p>
+{% endblock %}

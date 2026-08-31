@@ -1,32 +1,32 @@
 """appname — a Station 42 service.
 
-Replace this with your real endpoints. The pieces that every app keeps:
-  * `configure_logging(...)` at startup
-  * `health_router` mounted so `/healthz` works for container + proxy probes
+Replace the endpoints with your own. The shape every app keeps (see
+``apps/CLAUDE.md`` and ``docs/dual-ui.md``):
+
+  * ``settings.py`` — ``Settings(BaseAppSettings)`` with the ``APPNAME_`` prefix
+  * ``api.py``      — the logic, mounted under ``/api``
+  * ``ui.py``       — thin desktop (``/d/``) and mobile (``/m/``) handlers
+  * ``main.py``     — logging + ``health_router`` + the routers + ``mount_dual_ui``
+
+Routes: ``/`` redirects by device to ``/d/`` or ``/m/``; ``/api/...`` is JSON;
+``/healthz`` is the probe; ``/static/...`` serves ``web/static/``.
 """
 
 from __future__ import annotations
 
 from fastapi import FastAPI
 
-from station_common import BaseAppSettings, configure_logging, health_router
+from appname.api import make_api_router
+from appname.settings import settings
+from appname.ui import make_ui_router
+from station_common import configure_logging, health_router
+from station_common.web import mount_dual_ui
 
-
-class Settings(BaseAppSettings):
-    """appname configuration. Environment variables use the `APPNAME_` prefix."""
-
-    model_config = BaseAppSettings.model_config | {"env_prefix": "APPNAME_"}
-
-    greeting: str = "Hello from appname"
-
-
-settings = Settings()
 configure_logging(settings.log_level)
 
 app = FastAPI(title="appname")
 app.include_router(health_router)
+app.include_router(make_api_router())
 
-
-@app.get("/")
-def index() -> dict[str, str]:
-    return {"service": "appname", "message": settings.greeting}
+desktop, mobile = mount_dual_ui(app, "appname")
+app.include_router(make_ui_router(desktop, mobile))

@@ -37,7 +37,8 @@ while IFS= read -r -d '' file; do
     sed -i "s/APPNAME_/${name_upper}_/g; s/appname/${name}/g" "$file"
 done < <(find "$dst" -type f -print0)
 
-echo "Created apps/$name"
+echo "Created apps/$name  —  dual-UI app: / -> /d/ or /m/, JSON at /api/, probe at /healthz"
+echo "  edit:  src/$name/api.py  and  src/$name/web/templates/{desktop,mobile}/index.html"
 echo
 echo "Registering the workspace member (uv sync)..."
 ( cd "$repo_root" && uv sync --all-packages )
@@ -59,17 +60,18 @@ cat <<EOF
     networks:
       - edge
 
-2. Add this route inside the '*.{\$DUCKDNS_DOMAIN}' block in infra/caddy/Caddyfile:
+2. Add this route inside the '*.{\$DUCKDNS_DOMAIN}' block in infra/caddy/Caddyfile
+   (one route — the desktop/mobile split is internal; see docs/dual-ui.md):
 
     @${name} host ${name}.{\$DUCKDNS_DOMAIN}
     handle @${name} {
         reverse_proxy ${name}:8000
     }
 
-3. Develop locally without Docker:
+3. Develop locally without Docker (/ redirects; try /d/ and /m/):
 
     uv run uvicorn ${name}.main:app --reload
 
-4. Ship it:  just up   (on the Pi:  just deploy)
+4. Ship it:  just check && just test   then   just up   (on the Pi:  just deploy)
 --------------------------------------------------------------------------------
 EOF

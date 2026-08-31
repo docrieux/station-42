@@ -11,8 +11,9 @@ just new-app notes        # name must match ^[a-z][a-z0-9_]*$
 
 Copies `_template/`, substitutes the name (`appname` → `notes`, `APPNAME_` →
 `NOTES_`), registers the uv workspace member, runs `uv sync`, prints the compose
-+ Caddy snippets. `_template/` itself is excluded from the workspace, ruff and
-pytest — never edit an app by editing the template.
++ Caddy snippets. The output is a **working dual-UI app** — `just test` passes on
+it before you write a line. `_template/` itself is excluded from the workspace,
+ruff and pytest — never edit an app by editing the template.
 
 ## The dual-UI route contract (mandatory)
 
@@ -98,8 +99,11 @@ app.include_router(make_ui_router(desktop, mobile))  # /d/ and /m/
 - **`ui.py` handlers stay thin:** call the same function `api.py` calls
   (`hello_info()` in the example), pass the result to
   `templates.TemplateResponse(request, "index.html", {...})`.
-- If `mount_dual_ui` isn't in `station_common` yet, add it there — don't
-  reimplement per app. Its source is `packages/station_common/src/station_common/web.py`.
+- `mount_dual_ui` / `is_mobile` live in
+  `packages/station_common/src/station_common/web.py`. Extend them there — never
+  reimplement device detection or the redirect per app.
+- `just new-app <name>` already scaffolds all of the above (`hello` is the same
+  shape). Fill in `api.py` + `web/templates/{desktop,mobile}/`.
 
 ## Config
 
