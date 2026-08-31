@@ -1,0 +1,50 @@
+# Station 42 reverse proxy.
+#
+# One wildcard cert for *.<your>.duckdns.org via the DuckDNS DNS-01 challenge,
+# then host-matched routes to each container on the `edge` network.
+#
+# Env (from compose, sourced from .env): DUCKDNS_DOMAIN, DUCKDNS_TOKEN, ACME_EMAIL
+
+{
+	email {$ACME_EMAIL}
+	# Staging CA while testing avoids Let's Encrypt rate limits. Uncomment,
+	# `just up`, confirm a cert is issued, then re-comment and `just up` again.
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+*.{$DUCKDNS_DOMAIN} {
+	tls {
+		dns duckdns {$DUCKDNS_TOKEN}
+		resolvers 1.1.1.1
+	}
+
+	# ---- Pi-hole ---------------------------------------------------------
+	@pihole host pihole.{$DUCKDNS_DOMAIN}
+	handle @pihole {
+		# Pi-hole's UI lives under /admin; send bare host there too.
+		redir / /admin/ 302
+		reverse_proxy pihole:8080
+	}
+
+	# ---- hello (example app) ------------------------------------------
+	@hello host hello.{$DUCKDNS_DOMAIN}
+	handle @hello {
+		reverse_proxy hello:8000
+	}
+
+	# ---- add new apps above this line ----------------------------------
+
+	# Anything else on the wildcard: simple landing response.
+	handle {
+		respond "Station 42" 200
+	}
+}
+
+# Bare apex (http://<your>.duckdns.org) -> nudge toward a real subdomain.
+{$DUCKDNS_DOMAIN} {
+	tls {
+		dns duckdns {$DUCKDNS_TOKEN}
+		resolvers 1.1.1.1
+	}
+	respond "Station 42 — use a subdomain, e.g. https://hello.{$DUCKDNS_DOMAIN}" 200
+}

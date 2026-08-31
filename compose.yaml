@@ -1,0 +1,68 @@
+# Station 42 — full stack for the Raspberry Pi.
+#
+# One file is the source of truth. To add a custom app, run `just new-app <name>`
+# and paste the printed service block below the others. To add an off-the-shelf
+# service, add a block that joins the `edge` network and a route in
+# infra/caddy/Caddyfile.
+#
+#   just up       # build + start everything
+#   just ps       # status
+#   just logs <svc>
+
+name: station42
+
+networks:
+  edge:
+    name: station42_edge
+
+services:
+  # ---- Reverse proxy + HTTPS (entry point for every web tool) --------------
+  caddy:
+    build:
+      context: ./infra/caddy
+    image: station42/caddy:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DUCKDNS_DOMAIN: ${DUCKDNS_DOMAIN:?set DUCKDNS_DOMAIN in .env}
+      DUCKDNS_TOKEN: ${DUCKDNS_TOKEN:?set DUCKDNS_TOKEN in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./infra/caddy/data:/data
+      - ./infra/caddy/config:/config
+    networks:
+      - edge
+
+  # ---- Pi-hole (network-wide ad blocking + local DNS) ---------------------
+  pihole:
+    image: pihole/pihole:latest
+    restart: unless-stopped
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+    environment:
+      TZ: ${TZ:-UTC}
+      FTLCONF_webserver_api_password: ${PIHOLE_PASSWORD:?set PIHOLE_PASSWORD in .env}
+      # Pi-hole v6 serves its UI on this port; Caddy proxies to it. Keep off 80/443.
+      FTLCONF_webserver_port: "8080"
+      FTLCONF_dns_listeningMode: "all"
+    volumes:
+      - ./services/pihole/data/etc-pihole:/etc/pihole
+    networks:
+      - edge
+
+  # ---- Example custom app (delete once you have real ones) ---------------
+  hello:
+    build:
+      context: .
+      dockerfile: apps/hello/Dockerfile
+    image: station42/hello:latest
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      TZ: ${TZ:-UTC}
+    networks:
+      - edge

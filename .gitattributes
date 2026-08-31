@@ -1,0 +1,21 @@
+# This repo is deployed to Linux (Raspberry Pi). Keep everything LF so shell
+# scripts, the justfile, Dockerfiles and the Caddyfile work there regardless of
+# the OS they were edited on.
+* text=auto eol=lf
+
+*.sh   text eol=lf
+*.py   text eol=lf
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml  text eol=lf
+*.md   text eol=lf
+
+Dockerfile  text eol=lf
+Caddyfile   text eol=lf
+justfile    text eol=lf
+uv.lock     text eol=lf linguist-generated=true
+
+# Binary-ish: never touch
+*.png binary
+*.jpg binary
+*.gz  binary

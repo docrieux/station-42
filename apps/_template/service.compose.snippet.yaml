@@ -1,0 +1,16 @@
+# Reference only — not loaded by Docker.
+# `just new-app <name>` prints this with `appname` substituted; paste the result
+# into the top-level compose.yaml under `services:`.
+
+  appname:
+    build:
+      context: .
+      dockerfile: apps/appname/Dockerfile
+    image: station42/appname:latest
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      TZ: ${TZ:-UTC}
+      # APPNAME_GREETING: "custom value"   # app-specific vars use the APPNAME_ prefix
+    networks:
+      - edge
