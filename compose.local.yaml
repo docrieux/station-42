@@ -1,0 +1,41 @@
+# Local test stack for THIS PC. The Pi never uses this file.
+#
+#   just up-local      build + start the whole stack locally
+#   just ps-local      status
+#   just logs-local x   follow one service
+#   just down-local    stop it
+#
+# It layers on compose.yaml (docker compose -f compose.yaml -f compose.local.yaml)
+# and changes exactly two things:
+#   1. publishes each app/service on 127.0.0.1 for direct curl/browser access
+#   2. points caddy at Caddyfile.local (internal CA, no ACME, no DuckDNS) with
+#      its own state dirs, so local certs never touch the prod ACME store
+#
+# Two ways to reach an app once it's up:
+#   direct  http://localhost:<port>/           (works in curl)
+#   routed  https://<name>.station42.localhost/ (browser resolves *.localhost;
+#                                                curl needs --resolve + -k)
+#
+# Port map -- keep in sync with docs/local-testing.md and Caddyfile.local:
+#   8000   reserved for `uv run uvicorn <app>.main:app --reload` (no container)
+#   8001   hello
+#   8002+  new apps
+#   8081   pihole UI
+#   8082+  new services
+
+name: station42
+
+services:
+  caddy:
+    volumes:
+      - ./infra/caddy/Caddyfile.local:/etc/caddy/Caddyfile:ro
+      - ./infra/caddy/data-local:/data
+      - ./infra/caddy/config-local:/config
+
+  pihole:
+    ports:
+      - "127.0.0.1:8081:8080"
+
+  hello:
+    ports:
+      - "127.0.0.1:8001:8000"

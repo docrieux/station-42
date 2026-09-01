@@ -126,6 +126,16 @@ app.include_router(make_ui_router(desktop, mobile))  # /d/ and /m/
 - Use a desktop UA and a mobile UA (`headers={"user-agent": ...}`) to assert `/`
   lands on the right one.
 
+## Running it
+
+- Fast edit loop, no container: `uv run uvicorn <name>.main:app --reload` →
+  `http://127.0.0.1:8000` (`/`, `/d/`, `/m/`, `/api/`, `/healthz`, `/docs`).
+- Before pushing, check the **built image** with the local stack: add a
+  `127.0.0.1` port stanza to `compose.local.yaml`, mirror the route into
+  `infra/caddy/Caddyfile.local`, then `just up-local`. This is what catches
+  Dockerfile / dependency / non-root / healthcheck problems. See
+  `docs/local-testing.md`.
+
 ## Dockerfile rules
 
 - `# syntax=docker/dockerfile:1`, multi-stage, build context **repo root**.

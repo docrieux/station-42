@@ -72,6 +72,17 @@ cat <<EOF
 
     uv run uvicorn ${name}.main:app --reload
 
-4. Ship it:  just check && just test   then   just up   (on the Pi:  just deploy)
+4. Test the built image locally (see docs/local-testing.md):
+   - add to compose.local.yaml under 'services:' (next free 127.0.0.1 port):
+
+    ${name}:
+      ports:
+        - "127.0.0.1:8002:8000"
+
+   - mirror the route into infra/caddy/Caddyfile.local, host
+     ${name}.station42.localhost
+   - just up-local   then open  http://localhost:8002/
+
+5. Ship it:  just check && just test   then   just up   (on the Pi:  just deploy)
 --------------------------------------------------------------------------------
 EOF

@@ -41,6 +41,7 @@ from anywhere over Tailscale. Architecture rationale: `docs/architecture.md`.
 
 ```
 compose.yaml              the running stack — source of truth
+compose.local.yaml        dev-only overlay for testing on this PC — never deployed
 justfile                  task shortcuts (see table below)
 .env / .env.example       config; .env is gitignored
 apps/                     custom Python services — uv workspace members
@@ -52,11 +53,12 @@ packages/station_common/  shared settings + logging + health (+ web helpers)
 services/                 off-the-shelf images: notes + data only, no code
   CLAUDE.md               <- third-party service rules
 infra/caddy/              proxy image (xcaddy + duckdns plugin) + Caddyfile
+  Caddyfile.local         routing for `just up-local` (internal CA, *.localhost)
   CLAUDE.md               <- routing rules, cert limits
 infra/tailscale/          host VPN setup notes (no code)
 infra/scripts/            bootstrap-pi · deploy · backup · new-app
   CLAUDE.md               <- script conventions + exec-bit gotcha
-docs/                     architecture · adding-a-tool · operations · remote-access · dual-ui
+docs/                     architecture · adding-a-tool · operations · remote-access · dual-ui · local-testing
 ```
 
 ## Commands (`just <recipe>` — or run the wrapped command)
@@ -70,6 +72,7 @@ docs/                     architecture · adding-a-tool · operations · remote-
 | `just ps` | container + health status |
 | `just pull` | pull newer third-party images |
 | `just check` | validate merged compose config (uses `.env`, else `.env.example`) |
+| `just up-local` | **this PC:** build + run the whole stack locally — 127.0.0.1 ports + Caddy on an internal CA. Also `down-local` / `ps-local` / `logs-local`. See `docs/local-testing.md` |
 | `just deploy` | **on the Pi:** `git reset --hard origin/main` + pull + `up --build` + prune |
 | `just backup` | **on the Pi:** tar every `**/data/` + `.env` to `backups/` (keeps 14) |
 | `just sync` | `uv sync --all-packages` — workspace venv |
@@ -88,14 +91,19 @@ docs/                     architecture · adding-a-tool · operations · remote-
 3. Paste the printed **service block** into `compose.yaml` under `services:`.
 4. Paste the printed **route** into `infra/caddy/Caddyfile`, above
    `# ---- add new apps above this line ----`.
-5. `just check && just lint && just test`.
-6. Commit only when asked. The wildcard cert already covers the new subdomain.
+5. Add a `127.0.0.1` port stanza to `compose.local.yaml` and mirror the route
+   into `infra/caddy/Caddyfile.local`; `just up-local` and check it in a browser.
+   See `docs/local-testing.md`.
+6. `just check && just lint && just test`.
+7. Commit only when asked. The wildcard cert already covers the new subdomain.
 
 ### Add an off-the-shelf service
 See **`services/CLAUDE.md`**. Short version: compose block joining `edge`, a Caddy
 route, a `services/<name>/README.md`, data under `services/<name>/data/`. Never
 publish 80/443. Publish another host port only for a real LAN need (Pi-hole's 53
-is the sole example).
+is the sole example). Test it before pushing with a `compose.local.yaml` stanza +
+`Caddyfile.local` route, then `just up-local` (`docs/local-testing.md`) — there's
+no `uvicorn` loop for a third-party image.
 
 ### Change an app's code
 Edit under `apps/<name>/src/`. Local loop, no container:

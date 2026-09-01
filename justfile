@@ -7,6 +7,10 @@ set dotenv-load := true
 # Compose files that make up the full stack. Add a line when you add a tool.
 compose := "-f compose.yaml"
 
+# Same, plus the local-testing overlay (see docs/local-testing.md). Uses .env if
+# present, else .env.example -- like `check`, so it works on a fresh clone.
+_dclocal := "docker compose --env-file " + ( if path_exists(".env") == "true" { ".env" } else { ".env.example" } ) + " -f compose.yaml -f compose.local.yaml"
+
 _default:
     @just --list
 
@@ -40,6 +44,24 @@ pull:
 # Uses .env if present, otherwise .env.example so it works on a fresh clone.
 check:
     docker compose --env-file {{ if path_exists(".env") == "true" { ".env" } else { ".env.example" } }} {{compose}} config -q && echo "compose OK"
+
+# ---- Local test stack (this PC, not the Pi) --------------------------------
+
+# Build + run the whole stack on this PC (127.0.0.1 ports + Caddy internal CA).
+up-local:
+    {{_dclocal}} up -d --build
+
+# Stop and remove the local stack (state under infra/caddy/*-local is kept).
+down-local:
+    {{_dclocal}} down
+
+# Local stack container + health status.
+ps-local:
+    {{_dclocal}} ps
+
+# Tail one local service's logs, e.g. `just logs-local caddy`.
+logs-local svc:
+    {{_dclocal}} logs -f --tail=100 {{svc}}
 
 # ---- Deploy (run on the Pi) --------------------------------------------------
 

@@ -1,0 +1,38 @@
+# Station 42 reverse proxy -- LOCAL testing only (compose.local.yaml mounts this
+# in place of ./Caddyfile). The Pi always uses ./Caddyfile.
+#
+# Differences from the production Caddyfile:
+#   - Caddy's internal CA instead of Let's Encrypt (no ACME, no DuckDNS, offline)
+#   - hostnames are *.station42.localhost, which browsers resolve to loopback
+#
+# Keep the route blocks below in sync with ./Caddyfile: every app added there
+# needs the same @name / handle block here (with the .station42.localhost host).
+
+{
+	# Caddy's own CA -- no ACME account, no DNS-01, no network needed.
+	local_certs
+}
+
+*.station42.localhost, station42.localhost {
+	tls internal
+
+	# ---- Pi-hole ---------------------------------------------------------
+	@pihole host pihole.station42.localhost
+	handle @pihole {
+		redir / /admin/ 302
+		reverse_proxy pihole:8080
+	}
+
+	# ---- hello (example app) ------------------------------------------
+	@hello host hello.station42.localhost
+	handle @hello {
+		reverse_proxy hello:8000
+	}
+
+	# ---- add new apps above this line ----------------------------------
+
+	# Anything else: simple landing response.
+	handle {
+		respond "Station 42 (local)" 200
+	}
+}

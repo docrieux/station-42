@@ -21,6 +21,9 @@ line ----`:
   actually serves (e.g. `reverse_proxy pihole:8080`); note it in the service README.
 - If the UI lives under a sub-path (Pi-hole's `/admin`), add
   `redir / /admin/ 302` inside the `handle`.
+- **Mirror the block into `Caddyfile.local`** (same `handle`, host
+  `<name>.station42.localhost`) so `just up-local` can route it too. See
+  `docs/local-testing.md`.
 
 ## Dual-UI apps need NO change here
 

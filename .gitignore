@@ -22,6 +22,12 @@ backups/
 infra/caddy/data/
 infra/caddy/config/
 
+# Local-testing Caddy state (internal CA) -- see docs/local-testing.md
+infra/caddy/data-local/
+infra/caddy/config-local/
+# ...but the local Caddyfile is tracked (the `*.local` rule above would hide it)
+!infra/caddy/Caddyfile.local
+
 # OS
 .DS_Store
 Thumbs.db

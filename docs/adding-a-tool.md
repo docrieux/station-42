@@ -80,7 +80,29 @@ If the app needs to persist files, add a bind mount:
       - ./apps/notes/data:/data
 ```
 
-### 4. Ship
+### 4. Test it locally in Docker
+
+Verify the image builds and runs before pushing — see
+[`local-testing.md`](local-testing.md). Add a stanza to `compose.local.yaml`
+publishing the next free port:
+
+```yaml
+  notes:
+    ports:
+      - "127.0.0.1:8002:8000"
+```
+
+Mirror the Caddy route into `infra/caddy/Caddyfile.local` (host
+`notes.station42.localhost`). Then:
+
+```bash
+just up-local
+curl http://localhost:8002/healthz          # {"status":"ok"}
+# browser: http://localhost:8002/  and  https://notes.station42.localhost/
+just down-local
+```
+
+### 5. Ship
 
 ```bash
 just check          # validate compose
@@ -128,7 +150,27 @@ Rules:
     }
 ```
 
-### 3. Notes + ship
+### 3. Test it locally
+
+There's no `uvicorn` loop for an off-the-shelf image, so this is the only
+pre-deploy check. Add a stanza to `compose.local.yaml` publishing the port the
+image serves, and mirror the route into `infra/caddy/Caddyfile.local`:
+
+```yaml
+  uptime:
+    ports:
+      - "127.0.0.1:8082:3001"
+```
+
+```bash
+just up-local
+# browser: http://localhost:8082/  and  https://uptime.station42.localhost/
+just down-local
+```
+
+See [`local-testing.md`](local-testing.md).
+
+### 4. Notes + ship
 
 Add `services/uptime/README.md` with anything non-obvious (default creds, first-run
 steps). Then:
