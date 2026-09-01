@@ -1,12 +1,18 @@
-"""wordbook — a Station 42 service.
+"""wordbook — a modifiable bilingual dictionary for Station 42.
 
-Replace the endpoints with your own. The shape every app keeps (see
-``apps/CLAUDE.md`` and ``docs/dual-ui.md``):
+Search a word in Spanish (rae-api.com) or English (dictionaryapi.dev), see its
+definition blocks, and bookmark it into a two-section personal dictionary that
+can be re-sorted alphabetically or by time added.
+
+Shape (see ``apps/CLAUDE.md`` / ``docs/dual-ui.md``):
 
   * ``settings.py`` — ``Settings(BaseAppSettings)`` with the ``WORDBOOK_`` prefix
-  * ``api.py``      — the logic, mounted under ``/api``
+  * ``models.py``   — the normalized ``Entry`` / ``Sense`` shape
+  * ``store.py``    — SQLite persistence under ``/data``
+  * ``sources/``    — one client + parser per language, behind a TTL cache
+  * ``api.py``      — the ``/api`` routes both UIs read from
   * ``ui.py``       — thin desktop (``/d/``) and mobile (``/m/``) handlers
-  * ``main.py``     — logging + ``health_router`` + the routers + ``mount_dual_ui``
+  * ``main.py``     — logging + lifespan + ``health_router`` + routers + ``mount_dual_ui``
 
 Routes: ``/`` redirects by device to ``/d/`` or ``/m/``; ``/api/...`` is JSON;
 ``/healthz`` is the probe; ``/static/...`` serves ``web/static/``.
@@ -14,17 +20,36 @@ Routes: ``/`` redirects by device to ``/d/`` or ``/m/``; ``/api/...`` is JSON;
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
+import httpx
 from fastapi import FastAPI
 
 from station_common import configure_logging, health_router
 from station_common.web import mount_dual_ui
+from wordbook import store
 from wordbook.api import make_api_router
 from wordbook.settings import settings
 from wordbook.ui import make_ui_router
 
 configure_logging(settings.log_level)
 
-app = FastAPI(title="wordbook")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    store.init_db(settings.db_path)
+    app.state.http = httpx.AsyncClient(
+        timeout=settings.http_timeout,
+        headers={"user-agent": "station42-wordbook"},
+    )
+    try:
+        yield
+    finally:
+        await app.state.http.aclose()
+
+
+app = FastAPI(title="wordbook", lifespan=lifespan)
 app.include_router(health_router)
 app.include_router(make_api_router())
 

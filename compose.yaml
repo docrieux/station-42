@@ -77,6 +77,8 @@ services:
     environment:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       TZ: ${TZ:-UTC}
+      # Optional: an rae-api.com key lifts the 100-req/day free tier. Empty is fine.
+      WORDBOOK_RAE_API_KEY: ${WORDBOOK_RAE_API_KEY:-}
     volumes:
       - ./apps/wordbook/data:/data
     networks:

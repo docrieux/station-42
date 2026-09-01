@@ -11,8 +11,10 @@ __pycache__/
 .mypy_cache/
 *.egg-info/
 
-# Runtime data written by containers (bind mounts)
-**/data/
+# Runtime data written by containers (bind mounts).
+# Match the *contents* (not the dir itself) so a committed .gitkeep can survive
+# -- Git can't re-include a file whose parent directory is excluded.
+**/data/*
 !**/data/.gitkeep
 
 # Backups

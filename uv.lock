@@ -842,6 +842,7 @@ version = "0.1.0"
 source = { editable = "apps/wordbook" }
 dependencies = [
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "station-common" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -849,6 +850,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "httpx", specifier = ">=0.28" },
     { name = "station-common", editable = "packages/station_common" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
 ]
