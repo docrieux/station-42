@@ -178,6 +178,14 @@ On Windows the exec bit is lost — restore it in the index with
   breaking DuckDNS → Tailscale resolution. Whitelist the domain on the router.
 - **Let's Encrypt rate limits:** while testing certs, uncomment the
   `acme_ca …staging…` line in `infra/caddy/Caddyfile`, verify, then re-comment.
+- **Docker Hub anonymous pull limit** (`failed waiting for authentication:
+  Global rate limit exceeded`): the Pi's IP has a small unauthenticated quota.
+  `just pull` is optional — it only refreshes floating third-party tags
+  (`pihole:latest`); `just up`/`just deploy` build the `station42/*` images
+  locally and reuse cached base images. To lift the limit, `docker login` on the
+  Pi with a free Docker Hub account (+ a Personal Access Token), or wait out the
+  6h window. The `pull access denied for station42/caddy|hello|wordbook` lines
+  are harmless — those images are local-only; `--ignore-buildable` skips them.
 
 ## Before you say a task is done
 

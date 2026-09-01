@@ -36,9 +36,13 @@ logs svc:
 ps:
     docker compose {{compose}} ps
 
+# --ignore-buildable skips our own station42/* images (built locally, not in any
+# registry). If Docker Hub rate-limits the pull, `docker login` on the host with
+# a free account raises the anonymous quota; `just pull` is optional anyway.
+#
 # Pull newer images for the off-the-shelf services.
 pull:
-    docker compose {{compose}} pull
+    docker compose {{compose}} pull --ignore-buildable
 
 # Validate the merged compose config without starting anything.
 # Uses .env if present, otherwise .env.example so it works on a fresh clone.
