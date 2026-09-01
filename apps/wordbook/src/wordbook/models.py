@@ -58,4 +58,12 @@ class WordNotFound(Exception):
 
 
 class SourceError(Exception):
-    """The source failed for a reason other than 'not found' (5xx, 429, network)."""
+    """The source failed for a reason other than 'not found' (5xx, network)."""
+
+
+class RateLimited(SourceError):
+    """The source's rate limit is exhausted (HTTP 429)."""
+
+    def __init__(self, retry_after: int | None = None) -> None:
+        super().__init__("rate limit exceeded")
+        self.retry_after = retry_after  # seconds until the limit resets, if known

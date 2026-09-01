@@ -4,7 +4,7 @@ from pathlib import Path
 
 import httpx
 import pytest
-from wordbook.models import SourceError, WordNotFound
+from wordbook.models import RateLimited, SourceError, WordNotFound
 from wordbook.settings import settings
 from wordbook.sources import freedict, rae
 
@@ -144,6 +144,36 @@ def test_fetch_es_not_found_passes_suggestions():
             with pytest.raises(WordNotFound) as exc:
                 await rae.fetch(c, "sll", settings=settings)
         assert exc.value.suggestions == ["solo", "sal"]
+
+    run(go())
+
+
+def test_fetch_429_rate_limited_from_header(monkeypatch):
+    monkeypatch.setattr(settings, "http_retries", 3)
+    calls = {"n": 0}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return httpx.Response(429, headers={"Retry-After": "3600"}, json={"ok": False})
+
+    async def go():
+        async with mock_client(handler) as c:
+            with pytest.raises(RateLimited) as exc:
+                await rae.fetch(c, "sol", settings=settings)
+        assert exc.value.retry_after == 3600
+        assert calls["n"] == 1  # a 429 is not retried
+
+    run(go())
+
+
+def test_fetch_429_reads_retry_after_from_body():
+    body = {"ok": False, "error": "RATE_LIMIT_EXCEEDED", "retry_after": 120}
+
+    async def go():
+        async with mock_client(lambda req: httpx.Response(429, json=body)) as c:
+            with pytest.raises(RateLimited) as exc:
+                await rae.fetch(c, "sol", settings=settings)
+        assert exc.value.retry_after == 120
 
     run(go())
 

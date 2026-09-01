@@ -200,6 +200,13 @@ a:hover { text-decoration: underline; }
 
 .notfound p { margin: .25rem 0; }
 .suggest { color: var(--muted); }
+.rate-reset {
+  margin-top: .4rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-size: .9rem;
+}
+.rate-reset:empty { display: none; }
 
 /* ---- definition blocks --------------------------------------------- */
 

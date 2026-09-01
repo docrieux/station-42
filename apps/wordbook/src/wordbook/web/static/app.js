@@ -19,6 +19,40 @@
   async function refresh({ result = false, list = false } = {}) {
     if (result) document.getElementById("result").innerHTML = await fragment("result");
     if (list) document.getElementById("dictlist").innerHTML = await fragment("list");
+    if (result) rateCountdown();
+  }
+
+  // Live "resets in 12h 58m 04s (around 14:32)" ticker on the rate-limit card.
+  let rateTimer = null;
+  function rateCountdown() {
+    clearInterval(rateTimer);
+    const el = document.querySelector(".rate-reset");
+    if (!el) return;
+    const at = el.dataset.resetAt
+      ? Date.parse(el.dataset.resetAt)
+      : Date.now() + parseInt(el.dataset.resetIn || "0", 10) * 1000;
+    const clock = new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const pad = (n) => String(n).padStart(2, "0");
+    const render = () => {
+      const left = Math.round((at - Date.now()) / 1000);
+      if (left <= 0) {
+        el.textContent = "You can try again now — search above.";
+        clearInterval(rateTimer);
+        return;
+      }
+      const h = Math.floor(left / 3600);
+      const m = Math.floor((left % 3600) / 60);
+      el.textContent =
+        "resets in " +
+        (h ? h + "h " : "") +
+        (h || m ? pad(m) + "m " : "") +
+        pad(left % 60) +
+        "s (around " +
+        clock +
+        ")";
+    };
+    render();
+    rateTimer = setInterval(render, 1000);
   }
 
   document.addEventListener("submit", (e) => {
@@ -73,4 +107,6 @@
     });
     if (res.ok || res.status === 404) await refresh({ result: true, list: true });
   }
+
+  rateCountdown(); // in case the page loaded straight onto a rate-limit card
 })();

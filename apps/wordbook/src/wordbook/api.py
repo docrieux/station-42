@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from typing import Any
 
@@ -22,7 +23,7 @@ from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
 from wordbook import store
-from wordbook.models import Entry, SourceError, StoredEntry, WordNotFound
+from wordbook.models import Entry, RateLimited, SourceError, StoredEntry, WordNotFound
 from wordbook.settings import settings
 from wordbook.sources import PARSERS, lookup
 
@@ -94,6 +95,32 @@ async def remove_word(language: str, word: str) -> bool:
     return await run_in_threadpool(store.delete_entry, language, word)
 
 
+def _humanize(seconds: int) -> str:
+    if seconds >= 3600:
+        hours, rem = divmod(seconds, 3600)
+        minutes = rem // 60
+        return f"{hours}h {minutes}m" if minutes else f"{hours}h"
+    if seconds >= 60:
+        return f"{seconds // 60} min"
+    return f"{seconds} s"
+
+
+def _reset_info(retry_after: int | None) -> dict[str, Any]:
+    """Turn a 'retry after N seconds' into fields the template can render.
+
+    ``reset_at`` is a UTC ISO timestamp; the browser renders the local clock and
+    a live countdown from it (see ``app.js``).
+    """
+    if not retry_after or retry_after <= 0:
+        return {"retry_after": None, "reset_at": None, "reset_in": None}
+    reset = (datetime.now(UTC) + timedelta(seconds=retry_after)).replace(microsecond=0)
+    return {
+        "retry_after": retry_after,
+        "reset_at": reset.isoformat(),
+        "reset_in": _humanize(retry_after),
+    }
+
+
 async def dictionary_page(*, language: str, sort: str, query: str, client: Any) -> dict[str, Any]:
     """Everything a ``/d/`` or ``/m/`` page needs, assembled once."""
     result: Entry | None = None
@@ -105,6 +132,8 @@ async def dictionary_page(*, language: str, sort: str, query: str, client: Any) 
             saved = await is_saved(language, result.word)
         except WordNotFound as exc:
             error = {"kind": "not_found", "word": exc.word, "suggestions": exc.suggestions}
+        except RateLimited as exc:
+            error = {"kind": "rate_limited", "word": query, **_reset_info(exc.retry_after)}
         except SourceError:
             error = {"kind": "unavailable", "word": query, "suggestions": []}
 
@@ -134,6 +163,14 @@ def _unavailable(language: str) -> HTTPException:
     return HTTPException(status_code=502, detail=f"the {language} dictionary source is unavailable")
 
 
+def _rate_limited(exc: RateLimited) -> HTTPException:
+    return HTTPException(
+        status_code=429,
+        detail={"error": "rate_limited", **_reset_info(exc.retry_after)},
+        headers={"Retry-After": str(exc.retry_after)} if exc.retry_after else None,
+    )
+
+
 def make_api_router() -> APIRouter:
     router = APIRouter(prefix="/api", tags=["wordbook"])
 
@@ -151,6 +188,8 @@ def make_api_router() -> APIRouter:
             return await search_word(language.value, word, client=request.app.state.http)
         except WordNotFound as exc:
             raise _not_found(exc) from exc
+        except RateLimited as exc:
+            raise _rate_limited(exc) from exc
         except SourceError as exc:
             raise _unavailable(language.value) from exc
 
@@ -172,6 +211,8 @@ def make_api_router() -> APIRouter:
             )
         except WordNotFound as exc:
             raise _not_found(exc) from exc
+        except RateLimited as exc:
+            raise _rate_limited(exc) from exc
         except SourceError as exc:
             raise _unavailable(body.language.value) from exc
         response.status_code = 201 if created else 200

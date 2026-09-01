@@ -6,7 +6,19 @@ import asyncio
 
 import httpx
 
-from wordbook.models import SourceError
+from wordbook.models import RateLimited, SourceError
+
+
+def _retry_after(response: httpx.Response) -> int | None:
+    """Seconds until the limit resets, from the ``Retry-After`` header or body."""
+    header = response.headers.get("retry-after", "")
+    if header.isdigit():
+        return int(header)
+    try:
+        value = response.json().get("retry_after")
+    except (ValueError, AttributeError):
+        return None
+    return int(value) if isinstance(value, (int, float)) else None
 
 
 async def get(
@@ -16,11 +28,12 @@ async def get(
     headers: dict[str, str] | None = None,
     retries: int = 1,
 ) -> httpx.Response:
-    """GET *url*, retrying transient failures (connection error, 5xx, 429).
+    """GET *url*, retrying transient failures (connection error, 5xx).
 
-    A read timeout is **not** retried — the server took the request and then
-    stalled, so asking again only doubles the wait. Returns the response for any
-    status below 500 (the caller handles 404 / 4xx). Raises
+    A read timeout is **not** retried (the server took the request and then
+    stalled). A 429 is **not** retried either — it raises :class:`RateLimited`
+    with the reset time so the caller can show it. Returns the response for any
+    other status below 500 (the caller handles 404 / 4xx). Raises
     :class:`~wordbook.models.SourceError` once the retries are used up.
     """
     delay = 0.5
@@ -33,7 +46,9 @@ async def get(
         except httpx.RequestError as exc:
             detail = f"{type(exc).__name__}: {exc}".strip()
         else:
-            if response.status_code < 500 and response.status_code != 429:
+            if response.status_code == 429:
+                raise RateLimited(_retry_after(response))
+            if response.status_code < 500:
                 return response
             detail = f"HTTP {response.status_code}"
         if attempt < retries:

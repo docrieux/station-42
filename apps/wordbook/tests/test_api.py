@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from wordbook.main import app
-from wordbook.models import SourceError, WordNotFound
+from wordbook.models import RateLimited, SourceError, WordNotFound
 from wordbook.sources import freedict
 
 
@@ -27,6 +27,8 @@ def client(monkeypatch):
             raise WordNotFound(w, ["zza", "zzb"])
         if w.casefold() == "boom":
             raise SourceError("source down")
+        if w.casefold() == "limited":
+            raise RateLimited(120)
         raw = _fake_en_payload(w)
         return freedict.parse(raw, w), raw
 
@@ -59,6 +61,16 @@ def test_lookup_not_found_returns_suggestions(client):
 def test_lookup_source_error_is_502(client):
     r = client.get("/api/lookup", params={"language": "en", "word": "boom"})
     assert r.status_code == 502
+
+
+def test_lookup_rate_limited_is_429_with_retry_after(client):
+    r = client.get("/api/lookup", params={"language": "es", "word": "limited"})
+    assert r.status_code == 429
+    assert r.headers["retry-after"] == "120"
+    detail = r.json()["detail"]
+    assert detail["retry_after"] == 120
+    assert detail["reset_in"] == "2 min"
+    assert detail["reset_at"].endswith("+00:00")  # UTC ISO
 
 
 def test_lookup_rejects_unknown_language(client):

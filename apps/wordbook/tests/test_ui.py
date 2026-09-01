@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from wordbook.main import app
-from wordbook.models import SourceError, WordNotFound
+from wordbook.models import RateLimited, SourceError, WordNotFound
 from wordbook.sources import PARSERS
 
 DESKTOP_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
@@ -50,6 +50,8 @@ def client(monkeypatch):
             raise WordNotFound(w, ["zza", "zzb"])
         if w.casefold() == "boom":
             raise SourceError("down")
+        if w.casefold() == "limited":
+            raise RateLimited(7200)
         raw = _payload(w, language)
         return PARSERS[language](raw, w), raw
 
@@ -114,6 +116,14 @@ def test_search_source_unavailable(client):
     assert r.status_code == 200
     assert "respond" in r.text.lower()
     assert "boom" in r.text
+
+
+def test_search_rate_limited_shows_reset(client):
+    r = client.get("/d/", params={"q": "limited", "lang": "es"})
+    assert r.status_code == 200
+    assert "rate limit" in r.text.lower()
+    assert "2h" in r.text  # 7200s humanized
+    assert 'data-reset-in="7200"' in r.text
 
 
 def test_partial_result_is_a_fragment(client):

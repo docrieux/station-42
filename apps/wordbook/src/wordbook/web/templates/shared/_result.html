@@ -1,7 +1,11 @@
 {% from "_macros.html" import senses %}
 {% if error %}
   <div class="card notfound">
-    {% if error.kind == 'unavailable' %}
+    {% if error.kind == 'rate_limited' %}
+      <p>The {{ 'English' if lang == 'en' else 'Spanish' }} dictionary&rsquo;s rate limit is used up.
+      {%- if error.reset_in %} It resets in about <strong>{{ error.reset_in }}</strong>.{% else %} Try again later.{% endif %}</p>
+      {% if error.retry_after %}<p class="rate-reset" data-reset-in="{{ error.retry_after }}" data-reset-at="{{ error.reset_at }}">resets in about {{ error.reset_in }}</p>{% endif %}
+    {% elif error.kind == 'unavailable' %}
       <p>The {{ 'English' if lang == 'en' else 'Spanish' }} dictionary didn&rsquo;t respond &mdash; it may not have <strong>{{ error.word }}</strong>, or it&rsquo;s briefly down. Try again in a moment.</p>
     {% else %}
       <p>No entry for <strong>{{ error.word }}</strong>.</p>
