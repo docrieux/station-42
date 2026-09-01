@@ -152,8 +152,12 @@ handled **inside the app**, so it needs **no** extra Caddy routes. See
 `infra/caddy/CLAUDE.md`.
 
 **Git.** LF only. Commit/push **only when the user asks**; if on `main`, branch
-first. Git user is `docrieux`. CI (`.github/workflows/ci.yml`) runs ruff + pytest
-+ `compose config -q` + an arm64 build of every image (no push).
+first. Git user is `docrieux`. Commit messages follow
+[Conventional Commits](https://www.conventionalcommits.org/): a
+`type(optional scope): summary` subject (`feat`, `fix`, `docs`, `refactor`,
+`test`, `chore`, `build`, `ci`, …), an optional body, and `BREAKING CHANGE:` in
+the footer for anything incompatible. CI (`.github/workflows/ci.yml`) runs ruff +
+pytest + `compose config -q` + an arm64 build of every image (no push).
 
 **Shell scripts.** `bash`, `set -euo pipefail`, idempotent, LF, mode `100755`.
 On Windows the exec bit is lost — restore it in the index with
