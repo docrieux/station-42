@@ -1,0 +1,7 @@
+{% if entries %}
+<ul class="entries">
+  {% for e in entries %}{% include "_entry.html" %}{% endfor %}
+</ul>
+{% else %}
+<p class="empty">Nothing saved in {{ 'English' if lang == 'en' else 'Spanish' }} yet — search a word and hit the bookmark.</p>
+{% endif %}

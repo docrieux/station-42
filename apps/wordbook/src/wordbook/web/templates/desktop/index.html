@@ -1,14 +1,18 @@
 {% extends "base.html" %}
+{% block title %}wordbook{% endblock %}
 {% block variant %}desktop{% endblock %}
 {% block body %}
+<header class="top">
   <h1>wordbook</h1>
-  <p class="lead">{{ info.message }}</p>
-  <table>
-    <tr><th>service</th><td>{{ info.service }}</td></tr>
-  </table>
-  <p class="links">
-    <a href="/m/">Open the mobile site &rarr;</a>
-    &nbsp;·&nbsp;
-    <a href="/api/">Raw JSON</a>
-  </p>
+  <a class="uiswitch" href="/m/">Mobile site &rarr;</a>
+</header>
+
+{% include "_searchbar.html" %}
+
+<div id="result" class="result-slot">{% include "_result.html" %}</div>
+
+<section class="dict">
+  {% include "_dicthead.html" %}
+  <div id="dictlist">{% include "_dictlist.html" %}</div>
+</section>
 {% endblock %}

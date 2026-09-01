@@ -1,0 +1,35 @@
+{% from "_macros.html" import senses %}
+{% if error %}
+  <div class="card notfound">
+    {% if error.kind == 'unavailable' %}
+      <p>The {{ 'English' if lang == 'en' else 'Spanish' }} dictionary didn&rsquo;t respond &mdash; it may not have <strong>{{ error.word }}</strong>, or it&rsquo;s briefly down. Try again in a moment.</p>
+    {% else %}
+      <p>No entry for <strong>{{ error.word }}</strong>.</p>
+      {% if error.suggestions %}
+      <p class="suggest">Did you mean
+        {% for s in error.suggestions %}<a class="chip" href="{{ prefix }}/?lang={{ lang }}&amp;q={{ s | urlencode }}">{{ s }}</a>{% endfor %}
+      </p>
+      {% endif %}
+    {% endif %}
+  </div>
+{% elif result %}
+  <article class="card entry">
+    <header class="entry-head">
+      <div>
+        <h2 class="word">{{ result.word }}</h2>
+        {% if result.phonetics %}<p class="phon">{{ result.phonetics | join(' · ') }}</p>{% endif %}
+      </div>
+      <form class="bookmark" method="post" action="{{ prefix }}/bookmark">
+        <input type="hidden" name="lang" value="{{ lang }}">
+        <input type="hidden" name="word" value="{{ result.word }}">
+        <button type="submit" class="btn-bookmark{{ ' on' if saved }}" aria-pressed="{{ 'true' if saved else 'false' }}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>
+          <span>{{ 'Saved' if saved else 'Save' }}</span>
+        </button>
+      </form>
+    </header>
+    {% if result.etymology %}<p class="etym">{{ result.etymology }}</p>{% endif %}
+    {{ senses(result) }}
+    {% if result.source_url %}<p class="src">from <a href="{{ result.source_url }}" target="_blank" rel="noopener">{{ result.source }}</a></p>{% endif %}
+  </article>
+{% endif %}

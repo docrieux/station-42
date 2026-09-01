@@ -1,0 +1,15 @@
+{% from "_macros.html" import langlabel %}
+<div class="dict-head">
+  <h2>{{ langlabel(lang) }} <span class="count">{{ count }}</span></h2>
+  <form class="sortform" method="get" action="{{ prefix }}/">
+    <input type="hidden" name="lang" value="{{ lang }}">
+    <input type="hidden" name="q" value="{{ query }}">
+    <select name="sort" aria-label="Sort words">
+      <option value="alpha_asc"{% if sort == 'alpha_asc' %} selected{% endif %}>A &rarr; Z</option>
+      <option value="alpha_desc"{% if sort == 'alpha_desc' %} selected{% endif %}>Z &rarr; A</option>
+      <option value="added_desc"{% if sort == 'added_desc' %} selected{% endif %}>Newest</option>
+      <option value="added_asc"{% if sort == 'added_asc' %} selected{% endif %}>Oldest</option>
+    </select>
+    <noscript><button type="submit">Sort</button></noscript>
+  </form>
+</div>

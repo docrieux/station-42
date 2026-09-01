@@ -1,4 +1,8 @@
-"""wordbook's JSON API — the logic both UIs read from. Served under ``/api``.
+"""wordbook's behaviour + JSON API.
+
+The service functions here are the single source of truth: the ``/api`` routes
+below and the ``/d/`` `/m/`` handlers in :mod:`wordbook.ui` both call them, so
+nothing is duplicated between the API and the two UIs (``docs/dual-ui.md``).
 
 - ``GET  /api/lookup``            live search against a source (RAE / dictionaryapi)
 - ``GET  /api/dictionary``        the saved words for one language, sorted
@@ -40,8 +44,13 @@ class BookmarkIn(BaseModel):
     word: str = Field(min_length=1)
 
 
+# --------------------------------------------------------------------------- #
+# Service layer — used by the routes below AND by wordbook.ui                 #
+# --------------------------------------------------------------------------- #
+
+
 def wordbook_info() -> dict[str, str]:
-    """Payload for ``GET /api/`` and the (placeholder) dual-UI templates."""
+    """Payload for ``GET /api/``."""
     return {"service": "wordbook", "message": "wordbook API — see /docs"}
 
 
@@ -49,6 +58,72 @@ def _stored(row: sqlite3.Row) -> StoredEntry:
     """Re-parse a saved raw payload into a :class:`StoredEntry`."""
     entry = PARSERS[row["language"]](json.loads(row["raw"]), row["word"])
     return StoredEntry(**entry.model_dump(), added_at=row["added_at"])
+
+
+async def search_word(language: str, word: str, *, client: Any) -> Entry:
+    """Live lookup. Raises :class:`WordNotFound` / :class:`SourceError`."""
+    entry, _raw = await lookup(language, word.strip(), client=client, settings=settings)
+    return entry
+
+
+async def bookmark_word(language: str, word: str, *, client: Any) -> tuple[bool, StoredEntry]:
+    """Re-fetch from the source and save it. Returns ``(created, stored)``."""
+    entry, raw = await lookup(language, word.strip(), client=client, settings=settings)
+    created = await run_in_threadpool(
+        store.upsert,
+        word=entry.word,
+        language=language,
+        source=entry.source,
+        raw=json.dumps(raw, ensure_ascii=False),
+    )
+    row = await run_in_threadpool(store.get_entry, language, entry.word)
+    return created, _stored(row)
+
+
+async def saved_entries(language: str, sort: str) -> list[StoredEntry]:
+    rows = await run_in_threadpool(store.list_entries, language, sort)
+    return [_stored(row) for row in rows]
+
+
+async def is_saved(language: str, word: str) -> bool:
+    row = await run_in_threadpool(store.get_entry, language, word)
+    return row is not None
+
+
+async def remove_word(language: str, word: str) -> bool:
+    return await run_in_threadpool(store.delete_entry, language, word)
+
+
+async def dictionary_page(*, language: str, sort: str, query: str, client: Any) -> dict[str, Any]:
+    """Everything a ``/d/`` or ``/m/`` page needs, assembled once."""
+    result: Entry | None = None
+    error: dict[str, Any] | None = None
+    saved = False
+    if query:
+        try:
+            result = await search_word(language, query, client=client)
+            saved = await is_saved(language, result.word)
+        except WordNotFound as exc:
+            error = {"kind": "not_found", "word": exc.word, "suggestions": exc.suggestions}
+        except SourceError:
+            error = {"kind": "unavailable", "word": query, "suggestions": []}
+
+    entries = await saved_entries(language, sort)
+    return {
+        "lang": language,
+        "sort": sort,
+        "query": query,
+        "result": result,
+        "saved": saved,
+        "error": error,
+        "entries": entries,
+        "count": len(entries),
+    }
+
+
+# --------------------------------------------------------------------------- #
+# HTTP routes — thin wrappers over the service layer                         #
+# --------------------------------------------------------------------------- #
 
 
 def _not_found(exc: WordNotFound) -> HTTPException:
@@ -73,22 +148,15 @@ def make_api_router() -> APIRouter:
         word: str = Query(min_length=1),
     ) -> Entry:
         try:
-            entry, _raw = await lookup(
-                language.value, word.strip(), client=request.app.state.http, settings=settings
-            )
+            return await search_word(language.value, word, client=request.app.state.http)
         except WordNotFound as exc:
             raise _not_found(exc) from exc
         except SourceError as exc:
             raise _unavailable(language.value) from exc
-        return entry
 
     @router.get("/dictionary", summary="List the saved dictionary for one language")
-    async def list_dictionary(
-        language: Language,
-        sort: Sort = Sort.added_desc,
-    ) -> dict[str, Any]:
-        rows = await run_in_threadpool(store.list_entries, language.value, sort.value)
-        entries = [_stored(row) for row in rows]
+    async def list_dictionary(language: Language, sort: Sort = Sort.added_desc) -> dict[str, Any]:
+        entries = await saved_entries(language.value, sort.value)
         return {
             "language": language.value,
             "sort": sort.value,
@@ -99,27 +167,15 @@ def make_api_router() -> APIRouter:
     @router.post("/dictionary", summary="Bookmark a word into the dictionary")
     async def add_word(request: Request, body: BookmarkIn, response: Response) -> dict[str, Any]:
         try:
-            entry, raw = await lookup(
-                body.language.value,
-                body.word.strip(),
-                client=request.app.state.http,
-                settings=settings,
+            created, stored = await bookmark_word(
+                body.language.value, body.word, client=request.app.state.http
             )
         except WordNotFound as exc:
             raise _not_found(exc) from exc
         except SourceError as exc:
             raise _unavailable(body.language.value) from exc
-
-        created = await run_in_threadpool(
-            store.upsert,
-            word=entry.word,
-            language=body.language.value,
-            source=entry.source,
-            raw=json.dumps(raw, ensure_ascii=False),
-        )
         response.status_code = 201 if created else 200
-        row = await run_in_threadpool(store.get_entry, body.language.value, entry.word)
-        return {"created": created, "entry": _stored(row)}
+        return {"created": created, "entry": stored}
 
     @router.delete(
         "/dictionary/{language}/{word}",
@@ -127,8 +183,7 @@ def make_api_router() -> APIRouter:
         summary="Remove a saved word",
     )
     async def delete_word(language: Language, word: str) -> Response:
-        deleted = await run_in_threadpool(store.delete_entry, language.value, word)
-        if not deleted:
+        if not await remove_word(language.value, word):
             raise HTTPException(status_code=404, detail="not in the dictionary")
         return Response(status_code=204)
 

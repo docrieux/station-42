@@ -1,0 +1,17 @@
+{% from "_macros.html" import senses %}
+{% set pos = e.senses | map(attribute='part_of_speech') | reject('none') | list %}
+<li class="saved">
+  <form class="remove" method="post" action="{{ prefix }}/remove">
+    <input type="hidden" name="lang" value="{{ lang }}">
+    <input type="hidden" name="word" value="{{ e.word }}">
+    <button type="submit" aria-label="Remove {{ e.word }}">&times;</button>
+  </form>
+  <details>
+    <summary>
+      <span class="w">{{ e.word }}</span>
+      {% if pos %}<span class="pos">{{ pos[0] }}</span>{% endif %}
+      <span class="when">{{ e.added_at.date() }}</span>
+    </summary>
+    {{ senses(e) }}
+  </details>
+</li>

@@ -1,0 +1,27 @@
+{% macro flag(code) -%}
+<span class="flag flag-{{ 'en' if code == 'en' else 'es' }}" aria-hidden="true"></span>
+{%- endmacro %}
+
+{% macro langlabel(code) -%}
+{{ 'English' if code == 'en' else 'Español' }}
+{%- endmacro %}
+
+{% macro senses(entry) %}
+<ol class="blocks">
+  {% for s in entry.senses %}
+  <li class="block">
+    <div class="block-head">
+      {% if s.number is not none %}<span class="num">{{ s.number }}</span>{% endif %}
+      {% if s.part_of_speech %}<span class="pos">{{ s.part_of_speech }}</span>{% endif %}
+      {% if s.usage %}<span class="tag">{{ s.usage }}</span>{% endif %}
+      {% for r in s.regions %}<span class="tag">{{ r }}</span>{% endfor %}
+      {% for d in s.domains %}<span class="tag">{{ d }}</span>{% endfor %}
+    </div>
+    <p class="def">{{ s.text }}</p>
+    {% for ex in s.examples %}<p class="ex">{{ ex }}</p>{% endfor %}
+    {% if s.synonyms %}<p class="rel"><span class="rel-k">syn</span>{% for w in s.synonyms %}<span class="chip">{{ w }}</span>{% endfor %}</p>{% endif %}
+    {% if s.antonyms %}<p class="rel"><span class="rel-k">ant</span>{% for w in s.antonyms %}<span class="chip">{{ w }}</span>{% endfor %}</p>{% endif %}
+  </li>
+  {% endfor %}
+</ol>
+{% endmacro %}

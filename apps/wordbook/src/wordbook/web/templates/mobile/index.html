@@ -1,7 +1,18 @@
 {% extends "base.html" %}
+{% block title %}wordbook{% endblock %}
 {% block variant %}mobile{% endblock %}
 {% block body %}
+<header class="top">
   <h1>wordbook</h1>
-  <p class="big">{{ info.message }}</p>
-  <p class="links"><a href="/d/">Desktop site &rarr;</a></p>
+  <a class="uiswitch" href="/d/">Desktop site &rarr;</a>
+</header>
+
+{% include "_searchbar.html" %}
+
+<div id="result" class="result-slot">{% include "_result.html" %}</div>
+
+<section class="dict">
+  {% include "_dicthead.html" %}
+  <div id="dictlist">{% include "_dictlist.html" %}</div>
+</section>
 {% endblock %}
