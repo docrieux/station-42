@@ -48,7 +48,8 @@ in `infra/caddy/Caddyfile.local`.
 |---|---|
 | 8000 | reserved for `uv run uvicorn <app>.main:app --reload` (no container) |
 | 8001 | hello |
-| 8002+ | new apps |
+| 8002 | wordbook |
+| 8003+ | new apps |
 | 8081 | pihole UI |
 | 8082+ | new services |
 

@@ -29,6 +29,12 @@
 		reverse_proxy hello:8000
 	}
 
+	# ---- wordbook ----------------------------------------------------
+	@wordbook host wordbook.station42.localhost
+	handle @wordbook {
+		reverse_proxy wordbook:8000
+	}
+
 	# ---- add new apps above this line ----------------------------------
 
 	# Anything else: simple landing response.

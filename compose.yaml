@@ -66,3 +66,18 @@ services:
       TZ: ${TZ:-UTC}
     networks:
       - edge
+
+  # ---- wordbook (personal dictionary) -----------------------------------
+  wordbook:
+    build:
+      context: .
+      dockerfile: apps/wordbook/Dockerfile
+    image: station42/wordbook:latest
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ./apps/wordbook/data:/data
+    networks:
+      - edge

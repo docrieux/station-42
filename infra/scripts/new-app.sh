@@ -43,6 +43,10 @@ echo
 echo "Registering the workspace member (uv sync)..."
 ( cd "$repo_root" && uv sync --all-packages )
 
+# The template's import order is only isort-clean for names that sort before
+# "station_common"; normalise the generated app so `just lint` passes for any name.
+( cd "$repo_root" && uv run ruff check --fix --quiet "apps/$name" && uv run ruff format --quiet "apps/$name" )
+
 cat <<EOF
 
 --------------------------------------------------------------------------------

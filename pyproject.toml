@@ -33,5 +33,8 @@ known-first-party = ["station_common"]
 
 [tool.pytest.ini_options]
 testpaths = ["apps", "packages"]
-addopts = "-q"
+# importlib mode: each app ships tests/test_api.py + tests/test_ui.py with no
+# __init__.py, so the default "prepend" mode collides on the duplicate basenames
+# once a second app exists.
+addopts = "-q --import-mode=importlib"
 norecursedirs = ["_template", ".*", "build", "dist", "*.egg-info", "data"]

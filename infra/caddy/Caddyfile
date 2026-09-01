@@ -32,6 +32,12 @@
 		reverse_proxy hello:8000
 	}
 
+	# ---- wordbook ----------------------------------------------------
+	@wordbook host wordbook.{$DUCKDNS_DOMAIN}
+	handle @wordbook {
+		reverse_proxy wordbook:8000
+	}
+
 	# ---- add new apps above this line ----------------------------------
 
 	# Anything else on the wildcard: simple landing response.

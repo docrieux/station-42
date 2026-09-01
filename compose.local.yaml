@@ -19,7 +19,8 @@
 # Port map -- keep in sync with docs/local-testing.md and Caddyfile.local:
 #   8000   reserved for `uv run uvicorn <app>.main:app --reload` (no container)
 #   8001   hello
-#   8002+  new apps
+#   8002   wordbook
+#   8003+  new apps
 #   8081   pihole UI
 #   8082+  new services
 
@@ -39,3 +40,7 @@ services:
   hello:
     ports:
       - "127.0.0.1:8001:8000"
+
+  wordbook:
+    ports:
+      - "127.0.0.1:8002:8000"
