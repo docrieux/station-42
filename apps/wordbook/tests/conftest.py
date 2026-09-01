@@ -25,6 +25,6 @@ def _fresh_state() -> None:
     db = Path(settings.db_path)
     for leftover in db.parent.glob(db.name + "*"):  # .db, .db-wal, .db-shm
         leftover.unlink()
-    sources.clear_cache()
     store.init_db(settings.db_path)
+    sources.clear_cache()  # after init_db: also wipes the persistent lookup_cache
     yield

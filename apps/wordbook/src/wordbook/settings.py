@@ -26,9 +26,15 @@ class Settings(BaseAppSettings):
     http_timeout: float = 6.0
     http_retries: int = 1
 
-    # How long a live lookup (hit or "not found") is cached in-process, so a
+    # In-process cache: how long a live lookup (hit or "not found") is held so a
     # search followed by a bookmark is a single upstream call.
     cache_ttl: float = 300.0
+
+    # Persistent cache (SQLite): successful lookups are kept **forever** — source
+    # dictionaries are effectively static, so the RAE daily quota is only ever
+    # spent on a word's first-ever lookup. A confirmed "not found" is trusted for
+    # this many days, then re-checked (a word could get added upstream).
+    lookup_cache_days: int = 30
 
 
 settings = Settings()

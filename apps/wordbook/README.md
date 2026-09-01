@@ -31,9 +31,20 @@ Everything works with JavaScript disabled (full-page reloads).
 
 ## Storage
 
-SQLite at `WORDBOOK_DB_PATH` (default `/data/wordbook.db`), one table keyed by
-`(language, word)`. The full upstream JSON is stored verbatim and re-parsed on
-read. `just backup` picks the file up via the `**/data/` bind mount.
+SQLite at `WORDBOOK_DB_PATH` (default `/data/wordbook.db`). `entries` holds the
+saved dictionary keyed by `(language, word)`; `lookup_cache` is a persistent
+cache of every source lookup. The full upstream JSON is stored verbatim and
+re-parsed on read. `just backup` picks the file up via the `**/data/` bind mount.
+
+### Quota / rate limits
+
+rae-api.com's free tier is per source IP: **10 req/min, 100 req/day**, resetting
+at 00:00 UTC (`429` responses carry `Retry-After`, surfaced in the UI as a live
+countdown). `lookup_cache` keeps every successful lookup **forever** — a source
+dictionary is effectively static — so the daily quota is only ever spent on a
+word's *first* lookup, across restarts and redeploys. A confirmed "not found" is
+trusted for `WORDBOOK_LOOKUP_CACHE_DAYS` (default 30) then re-checked. Set
+`WORDBOOK_RAE_API_KEY` for the free Developer tier (5,000 req/day, per key).
 
 ## Local development
 

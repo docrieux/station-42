@@ -26,6 +26,21 @@ CREATE TABLE IF NOT EXISTS entries (
 )
 """
 
+# Persistent lookup cache -- a word is only ever fetched from a source once
+# (see wordbook.sources.lookup). `kind` is 'ok' (raw = upstream JSON) or
+# 'notfound' (raw = the suggestions list).
+_CACHE_SCHEMA = """
+CREATE TABLE IF NOT EXISTS lookup_cache (
+    language  TEXT NOT NULL,
+    word      TEXT NOT NULL,
+    kind      TEXT NOT NULL CHECK (kind IN ('ok', 'notfound')),
+    source    TEXT NOT NULL DEFAULT '',
+    raw       TEXT NOT NULL DEFAULT '',
+    cached_at TEXT NOT NULL,
+    PRIMARY KEY (language, word)
+)
+"""
+
 # sort key -> ORDER BY clause. The API layer validates the key against a
 # StrEnum; this dict is the second guard against interpolating anything else.
 _ORDER_BY = {
@@ -46,6 +61,7 @@ def init_db(path: str) -> None:
     with _cursor() as conn:
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute(_SCHEMA)
+        conn.execute(_CACHE_SCHEMA)
 
 
 def _connect() -> sqlite3.Connection:
@@ -140,3 +156,33 @@ def count(language: str) -> int:
             "SELECT COUNT(*) AS n FROM entries WHERE language = ?", (language,)
         ).fetchone()
         return int(row["n"])
+
+
+# --------------------------------------------------------------------------- #
+# Persistent lookup cache                                                    #
+# --------------------------------------------------------------------------- #
+
+
+def cache_get(language: str, word: str) -> sqlite3.Row | None:
+    with _cursor() as conn:
+        return conn.execute(
+            "SELECT kind, source, raw, cached_at FROM lookup_cache WHERE language = ? AND word = ?",
+            (language, word),
+        ).fetchone()
+
+
+def cache_put(*, language: str, word: str, kind: str, source: str = "", raw: str = "") -> None:
+    with _cursor() as conn:
+        conn.execute(
+            "INSERT INTO lookup_cache (language, word, kind, source, raw, cached_at) "
+            "VALUES (?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(language, word) DO UPDATE SET "
+            "kind = excluded.kind, source = excluded.source, raw = excluded.raw, "
+            "cached_at = excluded.cached_at",
+            (language, word, kind, source, raw, datetime.now(UTC).isoformat()),
+        )
+
+
+def cache_clear() -> None:
+    with _cursor() as conn:
+        conn.execute("DELETE FROM lookup_cache")

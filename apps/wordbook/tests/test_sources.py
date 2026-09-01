@@ -281,3 +281,49 @@ def test_lookup_does_not_cache_source_error(monkeypatch):
         assert calls["n"] == 3  # retried every time, never cached
 
     run(go())
+
+
+def test_ok_lookup_persists_across_process_restart():
+    from wordbook import sources
+
+    sources.clear_cache()
+    calls = {"n": 0}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return httpx.Response(200, json=fx("es_sol.json"))
+
+    async def go():
+        async with mock_client(handler) as c:
+            entry, _raw = await sources.lookup("es", "sol", client=c, settings=settings)
+            assert entry.word == "sol"
+
+            sources._cache.clear()  # simulate a restart: L1 gone, L2 (SQLite) kept
+            again, _ = await sources.lookup("es", "sol", client=c, settings=settings)
+            assert again.word == "sol"
+
+        assert calls["n"] == 1  # the second lookup was served from the persistent cache
+
+    run(go())
+
+
+def test_notfound_cache_expires_after_the_window(monkeypatch):
+    from wordbook import sources
+
+    sources.clear_cache()
+    monkeypatch.setattr(settings, "lookup_cache_days", 0)  # never trust a stored miss
+    calls = {"n": 0}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return httpx.Response(404, json={"ok": False, "error": "NOT_FOUND", "suggestions": None})
+
+    async def go():
+        async with mock_client(handler) as c:
+            for _ in range(3):
+                sources._cache.clear()  # force past L1 each time
+                with pytest.raises(WordNotFound):
+                    await sources.lookup("es", "zzzznope", client=c, settings=settings)
+        assert calls["n"] == 3  # the stale persisted miss is re-checked every time
+
+    run(go())

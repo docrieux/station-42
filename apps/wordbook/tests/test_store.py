@@ -76,3 +76,19 @@ def test_delete():
     assert store.delete_entry("es", "casa") is True
     assert store.delete_entry("es", "casa") is False
     assert store.count("es") == 0
+
+
+def test_lookup_cache_roundtrip():
+    assert store.cache_get("es", "casa") is None
+
+    store.cache_put(language="es", word="casa", kind="ok", source="rae-api.com", raw=RAW)
+    row = store.cache_get("es", "casa")
+    assert (row["kind"], row["source"], row["raw"]) == ("ok", "rae-api.com", RAW)
+    assert row["cached_at"]
+
+    # upsert on the same key
+    store.cache_put(language="es", word="casa", kind="notfound", raw="[]")
+    assert store.cache_get("es", "casa")["kind"] == "notfound"
+
+    store.cache_clear()
+    assert store.cache_get("es", "casa") is None
