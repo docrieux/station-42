@@ -1,4 +1,4 @@
-{% from "_macros.html" import langlabel %}
+{% from "_macros.html" import langlabel, sense_rows %}
 <div class="dict-head">
   <h2>{{ langlabel(lang) }} <span class="count">{{ count }}</span></h2>
   <form class="sortform" method="get" action="{{ prefix }}/">
@@ -13,3 +13,16 @@
     <noscript><button type="submit">Sort</button></noscript>
   </form>
 </div>
+
+<details class="addbox"{% if open_add %} open{% endif %}>
+  <summary>+ Add a word</summary>
+  <form class="wbform manualform" method="post" action="{{ prefix }}/manual">
+    <input type="hidden" name="lang" value="{{ lang }}">
+    <input class="word" name="word" placeholder="Word" value="{{ prefill_word }}" required autocomplete="off">
+    <div class="senses">{{ sense_rows(none) }}</div>
+    <div class="wbform-actions">
+      <button type="button" class="addrow">+ definition</button>
+      <button type="submit" class="primary">Save</button>
+    </div>
+  </form>
+</details>

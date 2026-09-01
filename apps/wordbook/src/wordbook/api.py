@@ -23,9 +23,11 @@ from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
 from wordbook import store
-from wordbook.models import Entry, RateLimited, SourceError, StoredEntry, WordNotFound
+from wordbook.models import Entry, RateLimited, Sense, SourceError, StoredEntry, WordNotFound
 from wordbook.settings import settings
 from wordbook.sources import PARSERS, lookup
+
+MANUAL_SOURCE = "manual"
 
 
 class Language(StrEnum):
@@ -45,6 +47,18 @@ class BookmarkIn(BaseModel):
     word: str = Field(min_length=1)
 
 
+class ManualSenseIn(BaseModel):
+    text: str = Field(min_length=1)
+    part_of_speech: str | None = None
+    example: str | None = None
+
+
+class ManualEntryIn(BaseModel):
+    language: Language
+    word: str = Field(min_length=1)
+    senses: list[ManualSenseIn] = Field(min_length=1)
+
+
 # --------------------------------------------------------------------------- #
 # Service layer — used by the routes below AND by wordbook.ui                 #
 # --------------------------------------------------------------------------- #
@@ -56,9 +70,53 @@ def wordbook_info() -> dict[str, str]:
 
 
 def _stored(row: sqlite3.Row) -> StoredEntry:
-    """Re-parse a saved raw payload into a :class:`StoredEntry`."""
-    entry = PARSERS[row["language"]](json.loads(row["raw"]), row["word"])
+    """Re-parse a saved payload into a :class:`StoredEntry`.
+
+    Manual entries store their normalized :class:`Entry` JSON directly; source
+    entries store the upstream payload and are re-parsed through ``PARSERS``.
+    """
+    if row["source"] == MANUAL_SOURCE:
+        entry = Entry.model_validate_json(row["raw"])
+    else:
+        entry = PARSERS[row["language"]](json.loads(row["raw"]), row["word"])
     return StoredEntry(**entry.model_dump(), added_at=row["added_at"])
+
+
+async def save_manual(
+    *, language: str, word: str, senses: list[ManualSenseIn]
+) -> tuple[str, StoredEntry]:
+    """Create or replace a hand-written entry. Returns ``(outcome, stored)``.
+
+    Raises :class:`ValueError` if no sense has any definition text.
+    """
+    word = word.strip()
+    blocks = [
+        Sense(
+            number=i + 1,
+            part_of_speech=(s.part_of_speech or "").strip() or None,
+            text=s.text.strip(),
+            examples=[s.example.strip()] if s.example and s.example.strip() else [],
+        )
+        for i, s in enumerate(s for s in senses if s.text.strip())
+    ]
+    if not blocks:
+        raise ValueError("a manual entry needs at least one definition")
+
+    entry = Entry(word=word, language=language, source=MANUAL_SOURCE, senses=blocks)
+    outcome = await run_in_threadpool(
+        store.put,
+        word=word,
+        language=language,
+        source=MANUAL_SOURCE,
+        raw=entry.model_dump_json(),
+    )
+    row = await run_in_threadpool(store.get_entry, language, word)
+    return outcome, _stored(row)
+
+
+async def saved_entry(language: str, word: str) -> StoredEntry | None:
+    row = await run_in_threadpool(store.get_entry, language, word)
+    return _stored(row) if row else None
 
 
 async def search_word(language: str, word: str, *, client: Any) -> Entry:
@@ -202,6 +260,24 @@ def make_api_router() -> APIRouter:
             "count": len(entries),
             "entries": entries,
         }
+
+    @router.get("/dictionary/{language}/{word}", summary="One saved entry")
+    async def get_saved(language: Language, word: str) -> StoredEntry:
+        entry = await saved_entry(language.value, word)
+        if entry is None:
+            raise HTTPException(status_code=404, detail="not in the dictionary")
+        return entry
+
+    @router.post("/entries", summary="Create or replace a hand-written entry")
+    async def put_manual(body: ManualEntryIn, response: Response) -> dict[str, Any]:
+        try:
+            outcome, stored = await save_manual(
+                language=body.language.value, word=body.word, senses=body.senses
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        response.status_code = 201 if outcome == "created" else 200
+        return {"outcome": outcome, "entry": stored}
 
     @router.post("/dictionary", summary="Bookmark a word into the dictionary")
     async def add_word(request: Request, body: BookmarkIn, response: Response) -> dict[str, Any]:

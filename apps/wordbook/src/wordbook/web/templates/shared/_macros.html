@@ -25,3 +25,22 @@
   {% endfor %}
 </ol>
 {% endmacro %}
+
+{# One editable definition row (definition + optional part of speech + example).
+   `senses` prefills the edit form; without it, render 3 blank rows so a no-JS
+   user can still add a few. #}
+{% macro _row(text='', pos='', ex='') %}
+<fieldset class="senserow">
+  <textarea name="def" rows="2" placeholder="Definition" required>{{ text }}</textarea>
+  <input name="pos" placeholder="part of speech (optional)" value="{{ pos }}" autocomplete="off">
+  <input name="ex" placeholder="example (optional)" value="{{ ex }}" autocomplete="off">
+</fieldset>
+{% endmacro %}
+
+{% macro sense_rows(senses) %}
+{% if senses %}
+  {% for s in senses %}{{ _row(s.text, s.part_of_speech or '', s.examples[0] if s.examples else '') }}{% endfor %}
+{% else %}
+  {% for _ in range(3) %}{{ _row() }}{% endfor %}
+{% endif %}
+{% endmacro %}

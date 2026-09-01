@@ -320,6 +320,89 @@ a.chip:hover { background: var(--accent); color: var(--accent-ink); text-decorat
 
 .empty { color: var(--muted); }
 
+.tag.manual { color: var(--accent); background: transparent; border: 1px solid var(--accent); }
+
+/* ---- manual add / edit forms ------------------------------------ */
+
+.btn-add {
+  display: inline-block;
+  margin-top: .6rem;
+  font-size: .85rem;
+  color: var(--accent);
+}
+
+.addbox { margin: .25rem 0 1rem; }
+.addbox > summary,
+.editbox > summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-block;
+  font-size: .85rem;
+  color: var(--muted);
+  padding: .3rem .7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+.addbox > summary::-webkit-details-marker,
+.editbox > summary::-webkit-details-marker { display: none; }
+.addbox[open] > summary,
+.editbox[open] > summary { color: var(--ink); }
+.editbox { margin: .9rem 1rem 1rem; }
+
+.wbform {
+  display: grid;
+  gap: .55rem;
+  margin-top: .7rem;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.wbform .word {
+  font: inherit;
+  font-weight: 600;
+  padding: .5rem .7rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: inherit;
+}
+.wbform .senses { display: grid; gap: .55rem; }
+.senserow {
+  display: grid;
+  gap: .35rem;
+  margin: 0;
+  padding: .6rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.senserow textarea,
+.senserow input {
+  font: inherit;
+  font-size: .9rem;
+  padding: .4rem .55rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: inherit;
+  resize: vertical;
+}
+.senserow textarea:focus,
+.senserow input:focus,
+.wbform .word:focus { outline: none; border-color: var(--accent); }
+.wbform-actions { display: flex; justify-content: space-between; gap: .5rem; }
+.wbform-actions button {
+  font: inherit;
+  font-size: .85rem;
+  padding: .4rem .9rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.wbform-actions button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+
 /* ---- desktop ----------------------------------------------------- */
 
 body.desktop .wrap { max-width: 46rem; padding: 2.5rem 2rem; }
@@ -337,3 +420,5 @@ body.mobile .langmenu .menu { left: 0; right: 0; }
 body.mobile .word { font-size: 1.55rem; }
 body.mobile .card { padding: 1.1rem; }
 body.mobile .saved > details > summary { padding: .85rem 2.4rem .85rem 1rem; font-size: 1.02rem; }
+body.mobile .wbform { padding: .8rem; }
+body.mobile .editbox { margin: .8rem .6rem .8rem; }

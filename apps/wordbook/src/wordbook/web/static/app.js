@@ -66,6 +66,9 @@
     } else if (form.matches(".remove")) {
       e.preventDefault();
       remove(form);
+    } else if (form.matches(".manualform")) {
+      e.preventDefault();
+      saveManual(form);
     }
   });
 
@@ -75,8 +78,18 @@
     refresh({ list: true });
   });
 
-  // Close the language menu on an outside click.
   document.addEventListener("click", (e) => {
+    // "+ definition" clones the last row in that form.
+    const addrow = e.target.closest(".addrow");
+    if (addrow) {
+      const rows = addrow.closest("form").querySelector(".senses");
+      const row = rows.lastElementChild.cloneNode(true);
+      row.querySelectorAll("textarea, input").forEach((el) => (el.value = ""));
+      rows.appendChild(row);
+      row.querySelector("textarea").focus();
+      return;
+    }
+    // Close the language menu on an outside click.
     const open = document.querySelector(".langmenu[open]");
     if (open && !e.target.closest(".langmenu")) open.open = false;
   });
@@ -106,6 +119,35 @@
       method: "DELETE",
     });
     if (res.ok || res.status === 404) await refresh({ result: true, list: true });
+  }
+
+  async function saveManual(form) {
+    const senses = [...form.querySelectorAll(".senserow")]
+      .map((r) => ({
+        text: r.querySelector('[name="def"]').value.trim(),
+        part_of_speech: r.querySelector('[name="pos"]').value.trim() || null,
+        example: r.querySelector('[name="ex"]').value.trim() || null,
+      }))
+      .filter((s) => s.text);
+    const word = form.elements.word.value.trim();
+    if (!word || !senses.length) return;
+
+    const btn = form.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    try {
+      const res = await fetch("/api/entries", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ language: form.elements.lang.value, word, senses }),
+      });
+      if (res.ok) {
+        form.closest("details.addbox, details.editbox")?.removeAttribute("open");
+        if (form.closest(".addbox")) form.reset();
+        await refresh({ list: true });
+      }
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   rateCountdown(); // in case the page loaded straight onto a rate-limit card

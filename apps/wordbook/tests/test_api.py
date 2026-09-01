@@ -116,3 +116,72 @@ def test_delete(client):
     client.post("/api/dictionary", json={"language": "en", "word": "hello"})
     assert client.delete("/api/dictionary/en/hello").status_code == 204
     assert client.delete("/api/dictionary/en/hello").status_code == 404
+
+
+# ---- manual entries -------------------------------------------------
+
+
+def test_manual_create(client):
+    r = client.post(
+        "/api/entries",
+        json={
+            "language": "es",
+            "word": "guagua",
+            "senses": [
+                {"text": "autobús"},
+                {"text": "bebé", "part_of_speech": "n", "example": "la guagua llora"},
+            ],
+        },
+    )
+    assert r.status_code == 201
+    body = r.json()
+    assert body["outcome"] == "created"
+    entry = body["entry"]
+    assert entry["source"] == "manual"
+    assert [s["number"] for s in entry["senses"]] == [1, 2]
+    assert entry["senses"][1]["part_of_speech"] == "n"
+    assert entry["senses"][1]["examples"] == ["la guagua llora"]
+
+
+def test_manual_update_keeps_added_at(client):
+    client.post("/api/entries", json={"language": "es", "word": "g", "senses": [{"text": "one"}]})
+    first = client.get("/api/dictionary/es/g").json()
+
+    r = client.post(
+        "/api/entries", json={"language": "es", "word": "g", "senses": [{"text": "two"}]}
+    )
+    assert r.status_code == 200
+    assert r.json()["outcome"] == "updated"
+
+    now = client.get("/api/dictionary/es/g").json()
+    assert [s["text"] for s in now["senses"]] == ["two"]
+    assert now["added_at"] == first["added_at"]
+
+
+def test_manual_rejects_empty(client):
+    assert (
+        client.post("/api/entries", json={"language": "es", "word": "x", "senses": []}).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            "/api/entries", json={"language": "es", "word": "x", "senses": [{"text": "  "}]}
+        ).status_code
+        == 422
+    )
+
+
+def test_manual_overrides_a_bookmarked_entry(client):
+    client.post("/api/dictionary", json={"language": "en", "word": "hello"})
+    r = client.post(
+        "/api/entries",
+        json={"language": "en", "word": "hello", "senses": [{"text": "my own definition"}]},
+    )
+    assert r.status_code == 200
+    entry = client.get("/api/dictionary/en/hello").json()
+    assert entry["source"] == "manual"
+    assert [s["text"] for s in entry["senses"]] == ["my own definition"]
+
+
+def test_get_single_entry_404(client):
+    assert client.get("/api/dictionary/es/nope").status_code == 404

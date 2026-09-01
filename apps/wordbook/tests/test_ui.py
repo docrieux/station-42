@@ -165,3 +165,55 @@ def test_bookmark_reflected_in_result_card(client):
     client.post("/d/bookmark", data={"lang": "es", "word": "casa"})
     r = client.get("/d/", params={"q": "casa", "lang": "es"})
     assert ">Saved<" in r.text
+
+
+# ---- manual entries -------------------------------------------------
+
+
+def test_manual_form_and_add_link_present(client):
+    page = client.get("/d/").text
+    assert 'class="wbform manualform"' in page
+    assert "+ Add a word" in page
+
+    nf = client.get("/d/", params={"q": "zzz", "lang": "es"}).text
+    assert "add=1" in nf
+    assert "Add it yourself" in nf
+
+
+def test_add_form_prefilled_from_query(client):
+    r = client.get("/d/", params={"lang": "es", "add": "1", "word": "xyz"})
+    assert 'class="addbox" open' in r.text
+    assert 'value="xyz"' in r.text
+
+
+def test_manual_post_creates_lists_and_is_editable(client):
+    r = client.post(
+        "/d/manual",
+        data={
+            "lang": "es",
+            "word": "chevere",
+            "def": ["cool", "great"],
+            "pos": ["", "adj"],
+            "ex": ["", ""],
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+
+    page = client.get("/d/", params={"lang": "es"}).text
+    assert "chevere" in page
+    assert "manual</span>" in page
+    assert "cool" in page and "great" in page
+    # the edit form is prefilled with the saved definitions
+    assert 'class="wbform manualform"' in page
+    assert ">cool</textarea>" in page
+
+
+def test_manual_post_without_word_reopens_form(client):
+    r = client.post(
+        "/d/manual",
+        data={"lang": "es", "word": "", "def": ["something"]},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    assert "add=1" in r.headers["location"]

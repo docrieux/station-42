@@ -15,6 +15,7 @@
       </p>
       {% endif %}
     {% endif %}
+    {% if error.word %}<p><a class="btn-add" href="{{ prefix }}/?lang={{ lang }}&amp;add=1&amp;word={{ error.word | urlencode }}">Add it yourself &rarr;</a></p>{% endif %}
   </div>
 {% elif result %}
   <article class="card entry">

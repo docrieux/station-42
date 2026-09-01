@@ -27,6 +27,25 @@ def test_rebookmark_keeps_original_added_at():
     assert row["raw"] == RAW  # DO NOTHING -> raw unchanged too
 
 
+def test_put_creates_then_replaces():
+    assert (
+        store.put(
+            word="casa",
+            language="es",
+            source="rae-api.com",
+            raw=RAW,
+            added_at="2021-06-01T00:00:00+00:00",
+        )
+        == "created"
+    )
+    assert store.put(word="casa", language="es", source="manual", raw='{"x": 9}') == "updated"
+    row = store.get_entry("es", "casa")
+    assert row["source"] == "manual"
+    assert row["raw"] == '{"x": 9}'
+    assert row["added_at"] == "2021-06-01T00:00:00+00:00"  # kept
+    assert store.count("es") == 1
+
+
 @pytest.mark.parametrize(
     ("sort", "expected"),
     [

@@ -13,13 +13,21 @@ re-sorts alphabetically or by time added.
 
 | Method & path | Purpose |
 |---|---|
-| `GET /api/lookup?language=es|en&word=` | live source lookup — `404` `{word, suggestions}` when unknown, `502` when the source is down |
-| `GET /api/dictionary?language=es|en&sort=` | saved words; `sort` ∈ `alpha_asc` `alpha_desc` `added_asc` `added_desc` (default `added_desc`) |
+| `GET /api/lookup?language=es|en&word=` | live source lookup — `404` `{word, suggestions}` when unknown, `429` `{retry_after, reset_at, reset_in}` + `Retry-After` when rate-limited, `502` when the source is down |
+| `GET /api/dictionary?language=es|en&sort=` | saved words; `sort` ∈ `alpha_asc` `alpha_desc` `added_asc` `added_desc` |
+| `GET /api/dictionary/{language}/{word}` | one saved entry — `404` if absent |
 | `POST /api/dictionary` `{language, word}` | bookmark — server re-fetches from the source; `201` created / `200` already saved |
+| `POST /api/entries` `{language, word, senses:[{text, part_of_speech?, example?}]}` | create or replace a **hand-written** entry (`source = "manual"`); `201` created / `200` replaced; `422` if no definition text |
 | `DELETE /api/dictionary/{language}/{word}` | remove — `204` / `404` |
 
-The dual-UI (`/`, `/d/`, `/m/`) is still the scaffold placeholder; the search /
-result-box / bookmark / sort front-end is a later phase.
+## UI
+
+`/` redirects by device to `/d/` (desktop) or `/m/` (mobile). Search, bookmark,
+sort, and — via the **"+ Add a word"** box in the section header or the **Edit**
+toggle on any saved entry — hand-written definitions. Manual entries store their
+normalized JSON directly (`source = "manual"`) and are re-parsed on read without
+touching a source; editing a bookmarked entry converts it to a manual one.
+Everything works with JavaScript disabled (full-page reloads).
 
 ## Storage
 

@@ -82,6 +82,31 @@ def upsert(*, word: str, language: str, source: str, raw: str, added_at: str | N
         return cur.rowcount > 0
 
 
+def put(*, word: str, language: str, source: str, raw: str, added_at: str | None = None) -> str:
+    """Create the entry, or replace its ``source`` + ``raw`` if the key exists.
+
+    Returns ``"created"`` or ``"updated"``. An update keeps the original
+    ``added_at`` (so a re-edited word stays where it is in the "by time added"
+    sort). Used for hand-written / edited entries; bookmarking still uses
+    :func:`upsert` (insert-if-absent).
+    """
+    with _cursor() as conn:
+        exists = conn.execute(
+            "SELECT 1 FROM entries WHERE language = ? AND word = ?", (language, word)
+        ).fetchone()
+        if exists:
+            conn.execute(
+                "UPDATE entries SET source = ?, raw = ? WHERE language = ? AND word = ?",
+                (source, raw, language, word),
+            )
+            return "updated"
+        conn.execute(
+            "INSERT INTO entries (word, language, added_at, source, raw) VALUES (?, ?, ?, ?, ?)",
+            (word, language, added_at or datetime.now(UTC).isoformat(), source, raw),
+        )
+        return "created"
+
+
 def list_entries(language: str, sort: str) -> list[sqlite3.Row]:
     """Rows for one language, ordered by one of the four ``_ORDER_BY`` keys."""
     order_by = _ORDER_BY[sort]  # KeyError on anything not in the whitelist

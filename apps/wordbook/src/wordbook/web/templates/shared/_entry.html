@@ -1,4 +1,4 @@
-{% from "_macros.html" import senses %}
+{% from "_macros.html" import senses, sense_rows %}
 {% set pos = e.senses | map(attribute='part_of_speech') | reject('none') | list %}
 <li class="saved">
   <form class="remove" method="post" action="{{ prefix }}/remove">
@@ -10,8 +10,21 @@
     <summary>
       <span class="w">{{ e.word }}</span>
       {% if pos %}<span class="pos">{{ pos[0] }}</span>{% endif %}
+      {% if e.source == 'manual' %}<span class="tag manual">manual</span>{% endif %}
       <span class="when">{{ e.added_at.date() }}</span>
     </summary>
     {{ senses(e) }}
+    <details class="editbox">
+      <summary>Edit</summary>
+      <form class="wbform manualform" method="post" action="{{ prefix }}/manual">
+        <input type="hidden" name="lang" value="{{ lang }}">
+        <input type="hidden" name="word" value="{{ e.word }}">
+        <div class="senses">{{ sense_rows(e.senses) }}</div>
+        <div class="wbform-actions">
+          <button type="button" class="addrow">+ definition</button>
+          <button type="submit" class="primary">Save</button>
+        </div>
+      </form>
+    </details>
   </details>
 </li>
