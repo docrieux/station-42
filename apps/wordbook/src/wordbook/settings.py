@@ -20,9 +20,15 @@ class Settings(BaseAppSettings):
     # English source: dictionaryapi.dev (Free Dictionary API), keyless.
     dictionaryapi_base_url: str = "https://api.dictionaryapi.dev"
 
-    # Outbound HTTP timeout (seconds) and how long a live lookup is cached
-    # in-process so a search followed by a bookmark is a single upstream call.
-    http_timeout: float = 10.0
+    # Outbound HTTP: read timeout (seconds) and how many times to retry a
+    # transient failure (timeout / connection error / 5xx / 429). dictionaryapi.dev
+    # in particular tends to hang on words it doesn't have, so a short timeout +
+    # a retry beats one long stall.
+    http_timeout: float = 6.0
+    http_retries: int = 1
+
+    # How long a live lookup (hit or "not found") is cached in-process, so a
+    # search followed by a bookmark is a single upstream call.
     cache_ttl: float = 300.0
 
 

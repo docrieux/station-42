@@ -2,8 +2,11 @@
 
 ``lookup`` is what the API calls for a live search *and* for a bookmark, so the
 cache turns "search then bookmark the same word" into a single upstream request
-and softens rae-api.com's 100-req/day free tier. The cache is per process and is
-cleared on restart; :func:`clear_cache` exists for tests.
+and softens rae-api.com's 100-req/day free tier. It also caches a confirmed
+"not found" (a stable fact) so repeat searches of a missing word are instant. A
+:class:`~wordbook.models.SourceError` is **not** cached, so the app recovers as
+soon as the upstream is healthy again. Per process; cleared on restart (and by
+:func:`clear_cache` in tests).
 """
 
 from __future__ import annotations
@@ -13,7 +16,7 @@ from typing import Any
 
 import httpx
 
-from wordbook.models import Entry, Language
+from wordbook.models import Entry, Language, WordNotFound
 from wordbook.settings import Settings
 from wordbook.sources import dictionaryapi, rae
 
@@ -22,7 +25,8 @@ _FETCHERS = {"es": rae.fetch, "en": dictionaryapi.fetch}
 #: Re-parse a stored raw payload back into an :class:`Entry`.
 PARSERS = {"es": rae.parse, "en": dictionaryapi.parse}
 
-_cache: dict[tuple[str, str], tuple[float, Entry, Any]] = {}
+# key -> (expires_at, kind, payload); kind is "ok" -> (entry, raw) or "notfound" -> suggestions
+_cache: dict[tuple[str, str], tuple[float, str, Any]] = {}
 
 
 def clear_cache() -> None:
@@ -39,8 +43,16 @@ async def lookup(
     key = (language, word.casefold())
     cached = _cache.get(key)
     if cached and cached[0] > time.monotonic():
-        return cached[1], cached[2]
+        _, kind, payload = cached
+        if kind == "ok":
+            return payload
+        raise WordNotFound(word, payload)
 
-    entry, raw = await _FETCHERS[language](client, word, settings=settings)
-    _cache[key] = (time.monotonic() + settings.cache_ttl, entry, raw)
+    try:
+        entry, raw = await _FETCHERS[language](client, word, settings=settings)
+    except WordNotFound as exc:
+        _cache[key] = (time.monotonic() + settings.cache_ttl, "notfound", exc.suggestions)
+        raise
+
+    _cache[key] = (time.monotonic() + settings.cache_ttl, "ok", (entry, raw))
     return entry, raw

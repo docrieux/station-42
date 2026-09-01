@@ -40,8 +40,11 @@ configure_logging(settings.log_level)
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     store.init_db(settings.db_path)
     app.state.http = httpx.AsyncClient(
-        timeout=settings.http_timeout,
+        timeout=httpx.Timeout(settings.http_timeout, connect=4.0),
         headers={"user-agent": "station42-wordbook"},
+        # Don't reuse connections: a source that stalls mid-response can otherwise
+        # poison a pooled keep-alive connection and every later request with it.
+        limits=httpx.Limits(max_keepalive_connections=0),
     )
     try:
         yield

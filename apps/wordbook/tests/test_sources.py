@@ -23,6 +23,12 @@ def mock_client(handler) -> httpx.AsyncClient:
     return httpx.AsyncClient(transport=httpx.MockTransport(handler))
 
 
+@pytest.fixture(autouse=True)
+def _no_retry_delay(monkeypatch):
+    # Keep the failure-path tests fast; the retry test opts back in.
+    monkeypatch.setattr(settings, "http_retries", 0)
+
+
 # ---- parsers -------------------------------------------------------------
 
 
@@ -130,5 +136,98 @@ def test_fetch_network_error_is_source_error():
         async with mock_client(boom) as c:
             with pytest.raises(SourceError):
                 await dictionaryapi.fetch(c, "hello", settings=settings)
+
+    run(go())
+
+
+def test_fetch_retries_transient_failure(monkeypatch):
+    monkeypatch.setattr(settings, "http_retries", 2)
+    calls = {"n": 0}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        if calls["n"] < 3:
+            return httpx.Response(503)
+        return httpx.Response(200, json=fx("en_hello.json"))
+
+    async def go():
+        async with mock_client(handler) as c:
+            entry, _raw = await dictionaryapi.fetch(c, "hello", settings=settings)
+        assert entry.word == "hello"
+        assert calls["n"] == 3
+
+    run(go())
+
+
+def test_read_timeout_is_not_retried(monkeypatch):
+    monkeypatch.setattr(settings, "http_retries", 3)
+    calls = {"n": 0}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        raise httpx.ReadTimeout("stalled")
+
+    async def go():
+        async with mock_client(handler) as c:
+            with pytest.raises(SourceError):
+                await dictionaryapi.fetch(c, "hello", settings=settings)
+        assert calls["n"] == 1  # fail fast, no retry
+
+    run(go())
+
+
+def test_fetch_gives_up_after_retries(monkeypatch):
+    monkeypatch.setattr(settings, "http_retries", 2)
+    calls = {"n": 0}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return httpx.Response(503)
+
+    async def go():
+        async with mock_client(handler) as c:
+            with pytest.raises(SourceError):
+                await dictionaryapi.fetch(c, "hello", settings=settings)
+        assert calls["n"] == 3  # initial + 2 retries
+
+    run(go())
+
+
+def test_lookup_caches_not_found(monkeypatch):
+    from wordbook import sources
+
+    sources.clear_cache()
+    calls = {"n": 0}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return httpx.Response(404, json={"ok": False, "error": "NOT_FOUND", "suggestions": None})
+
+    async def go():
+        async with mock_client(handler) as c:
+            for _ in range(3):
+                with pytest.raises(WordNotFound):
+                    await sources.lookup("es", "zzzznope", client=c, settings=settings)
+        assert calls["n"] == 1  # only the first miss hit the network
+
+    run(go())
+
+
+def test_lookup_does_not_cache_source_error(monkeypatch):
+    from wordbook import sources
+
+    sources.clear_cache()
+    calls = {"n": 0}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return httpx.Response(503)
+
+    async def go():
+        async with mock_client(handler) as c:
+            for _ in range(3):
+                with pytest.raises(SourceError):
+                    await sources.lookup("en", "flaky", client=c, settings=settings)
+        assert calls["n"] == 3  # retried every time, never cached
 
     run(go())

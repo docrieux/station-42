@@ -16,6 +16,7 @@ import httpx
 
 from wordbook.models import Entry, Sense, SourceError, WordNotFound
 from wordbook.settings import Settings
+from wordbook.sources._http import get as http_get
 
 SOURCE = "rae-api.com"
 
@@ -102,19 +103,18 @@ def parse(payload: dict[str, Any], word: str) -> Entry:
 async def fetch(client: httpx.AsyncClient, word: str, *, settings: Settings) -> tuple[Entry, Any]:
     url = f"{settings.rae_base_url}/api/words/{quote(word)}"
     headers = {"X-API-Key": settings.rae_api_key} if settings.rae_api_key else None
-    try:
-        response = await client.get(url, headers=headers)
-    except httpx.RequestError as exc:
-        raise SourceError(str(exc)) from exc
+    response = await http_get(client, url, headers=headers, retries=settings.http_retries)
 
     if response.status_code == 404:
         body = _safe_json(response)
         raise WordNotFound(word, body.get("suggestions") if isinstance(body, dict) else None)
-    if response.status_code == 429 or response.status_code >= 500:
+    if response.status_code >= 400:
         raise SourceError(f"rae-api.com returned {response.status_code}")
-    response.raise_for_status()
 
-    payload = response.json()
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise SourceError("rae-api.com returned a non-JSON response") from exc
     if not isinstance(payload, dict) or not payload.get("ok") or "data" not in payload:
         raise WordNotFound(word)
     return parse(payload, word), payload
