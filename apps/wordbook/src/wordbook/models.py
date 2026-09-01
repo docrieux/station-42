@@ -1,6 +1,6 @@
 """The common shape both dictionary sources are normalized into.
 
-``rae-api.com`` (Spanish) and ``dictionaryapi.dev`` (English) return very
+``rae-api.com`` (Spanish) and ``freedictionaryapi.com`` (English) return very
 different JSON. Each source module parses its payload into an :class:`Entry`
 made of :class:`Sense` blocks — one block per definition, which is also the unit
 the UI renders and the dictionary sorts.
@@ -35,7 +35,7 @@ class Entry(BaseModel):
 
     word: str
     language: Language
-    source: str  # "rae-api.com" | "dictionaryapi.dev"
+    source: str  # "rae-api.com" | "freedictionaryapi.com"
     source_url: str | None = None
     phonetics: list[str] = []  # EN IPA strings; [] for ES
     etymology: str | None = None

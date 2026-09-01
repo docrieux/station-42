@@ -17,13 +17,12 @@ class Settings(BaseAppSettings):
     rae_base_url: str = "https://rae-api.com"
     rae_api_key: str = ""
 
-    # English source: dictionaryapi.dev (Free Dictionary API), keyless.
-    dictionaryapi_base_url: str = "https://api.dictionaryapi.dev"
+    # English source: freedictionaryapi.com (Wiktionary-derived), keyless.
+    freedict_base_url: str = "https://freedictionaryapi.com"
 
     # Outbound HTTP: read timeout (seconds) and how many times to retry a
-    # transient failure (timeout / connection error / 5xx / 429). dictionaryapi.dev
-    # in particular tends to hang on words it doesn't have, so a short timeout +
-    # a retry beats one long stall.
+    # transient failure (connection error / 5xx / 429). A read timeout is not
+    # retried (see wordbook.sources._http).
     http_timeout: float = 6.0
     http_retries: int = 1
 

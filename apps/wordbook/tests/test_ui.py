@@ -29,19 +29,17 @@ def _payload(word: str, language: str):
                 ],
             },
         }
-    return [
-        {
-            "word": word,
-            "meanings": [
-                {
-                    "partOfSpeech": "noun",
-                    "definitions": [
-                        {"definition": f"definition of {word}", "example": "an example"}
-                    ],
-                }
-            ],
-        }
-    ]
+    return {
+        "word": word,
+        "entries": [
+            {
+                "partOfSpeech": "noun",
+                "pronunciations": [{"type": "ipa", "text": "/x/", "tags": []}],
+                "senses": [{"definition": f"definition of {word}", "examples": ["an example"]}],
+            }
+        ],
+        "source": {"url": f"https://en.wiktionary.org/wiki/{word}"},
+    }
 
 
 @pytest.fixture

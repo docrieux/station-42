@@ -7,7 +7,7 @@ re-sorts alphabetically or by time added.
 | Language | Source | Key |
 |---|---|---|
 | Spanish (`es`) | [rae-api.com](https://rae-api.com) (unofficial RAE) | none — free tier is 10 req/min, 100 req/day; set `WORDBOOK_RAE_API_KEY` to lift it |
-| English (`en`) | [dictionaryapi.dev](https://dictionaryapi.dev) (Free Dictionary API) | none |
+| English (`en`) | [freedictionaryapi.com](https://freedictionaryapi.com) (Wiktionary-derived) | none |
 
 ## API
 

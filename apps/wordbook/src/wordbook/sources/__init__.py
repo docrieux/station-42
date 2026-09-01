@@ -18,12 +18,12 @@ import httpx
 
 from wordbook.models import Entry, Language, WordNotFound
 from wordbook.settings import Settings
-from wordbook.sources import dictionaryapi, rae
+from wordbook.sources import freedict, rae
 
-_FETCHERS = {"es": rae.fetch, "en": dictionaryapi.fetch}
+_FETCHERS = {"es": rae.fetch, "en": freedict.fetch}
 
 #: Re-parse a stored raw payload back into an :class:`Entry`.
-PARSERS = {"es": rae.parse, "en": dictionaryapi.parse}
+PARSERS = {"es": rae.parse, "en": freedict.parse}
 
 # key -> (expires_at, kind, payload); kind is "ok" -> (entry, raw) or "notfound" -> suggestions
 _cache: dict[tuple[str, str], tuple[float, str, Any]] = {}

@@ -4,7 +4,7 @@ The service functions here are the single source of truth: the ``/api`` routes
 below and the ``/d/`` `/m/`` handlers in :mod:`wordbook.ui` both call them, so
 nothing is duplicated between the API and the two UIs (``docs/dual-ui.md``).
 
-- ``GET  /api/lookup``            live search against a source (RAE / dictionaryapi)
+- ``GET  /api/lookup``            live search against a source (RAE / freedictionaryapi)
 - ``GET  /api/dictionary``        the saved words for one language, sorted
 - ``POST /api/dictionary``        bookmark a word (server re-fetches from the source)
 - ``DELETE /api/dictionary/{language}/{word}``   remove a saved word

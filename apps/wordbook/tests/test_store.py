@@ -12,7 +12,7 @@ def test_upsert_is_idempotent():
 
 def test_same_spelling_in_both_sections():
     store.upsert(word="no", language="es", source="rae-api.com", raw=RAW)
-    store.upsert(word="no", language="en", source="dictionaryapi.dev", raw=RAW)
+    store.upsert(word="no", language="en", source="freedictionaryapi.com", raw=RAW)
     assert store.count("es") == 1
     assert store.count("en") == 1
 

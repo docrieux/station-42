@@ -1,6 +1,6 @@
 """wordbook — a modifiable bilingual dictionary for Station 42.
 
-Search a word in Spanish (rae-api.com) or English (dictionaryapi.dev), see its
+Search a word in Spanish (rae-api.com) or English (freedictionaryapi.com), see its
 definition blocks, and bookmark it into a two-section personal dictionary that
 can be re-sorted alphabetically or by time added.
 

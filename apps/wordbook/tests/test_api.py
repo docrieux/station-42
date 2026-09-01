@@ -2,21 +2,21 @@ import pytest
 from fastapi.testclient import TestClient
 from wordbook.main import app
 from wordbook.models import SourceError, WordNotFound
-from wordbook.sources import dictionaryapi
+from wordbook.sources import freedict
 
 
-def _fake_en_payload(word: str) -> list[dict]:
-    return [
-        {
-            "word": word,
-            "meanings": [
-                {
-                    "partOfSpeech": "noun",
-                    "definitions": [{"definition": f"def of {word}", "example": "an example"}],
-                }
-            ],
-        }
-    ]
+def _fake_en_payload(word: str) -> dict:
+    return {
+        "word": word,
+        "entries": [
+            {
+                "partOfSpeech": "noun",
+                "pronunciations": [{"type": "ipa", "text": "/x/", "tags": []}],
+                "senses": [{"definition": f"def of {word}", "examples": ["an example"]}],
+            }
+        ],
+        "source": {"url": f"https://en.wiktionary.org/wiki/{word}"},
+    }
 
 
 @pytest.fixture
@@ -28,7 +28,7 @@ def client(monkeypatch):
         if w.casefold() == "boom":
             raise SourceError("source down")
         raw = _fake_en_payload(w)
-        return dictionaryapi.parse(raw, w), raw
+        return freedict.parse(raw, w), raw
 
     monkeypatch.setattr("wordbook.api.lookup", fake_lookup)
     with TestClient(app) as c:

@@ -6,7 +6,7 @@ import httpx
 import pytest
 from wordbook.models import SourceError, WordNotFound
 from wordbook.settings import settings
-from wordbook.sources import dictionaryapi, rae
+from wordbook.sources import freedict, rae
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -25,25 +25,26 @@ def mock_client(handler) -> httpx.AsyncClient:
 
 @pytest.fixture(autouse=True)
 def _no_retry_delay(monkeypatch):
-    # Keep the failure-path tests fast; the retry test opts back in.
+    # Keep the failure-path tests fast; the retry tests opt back in.
     monkeypatch.setattr(settings, "http_retries", 0)
 
 
-# ---- parsers -------------------------------------------------------------
+# ---- parsers ----------------------------------------------------------
 
 
 def test_parse_en_hello():
-    entry = dictionaryapi.parse(fx("en_hello.json"), "hello")
-    assert (entry.word, entry.language, entry.source) == ("hello", "en", "dictionaryapi.dev")
+    entry = freedict.parse(fx("en_hello.json"), "hello")
+    assert (entry.word, entry.language, entry.source) == ("hello", "en", "freedictionaryapi.com")
     assert entry.source_url == "https://en.wiktionary.org/wiki/hello"
     assert "/həˈləʊ/" in entry.phonetics
-    assert len(entry.senses) == 7  # noun 1 + verb 1 + interjection 5
-    assert {s.part_of_speech for s in entry.senses} == {"noun", "verb", "interjection"}
+    assert len(entry.senses) == 7  # interjection 5 + noun 1 + verb 1
+    assert {s.part_of_speech for s in entry.senses} == {"interjection", "noun", "verb"}
 
-    interjections = [s for s in entry.senses if s.part_of_speech == "interjection"]
-    assert interjections[0].examples == ["Hello, everyone."]
-    assert entry.senses[0].antonyms == []  # noun: nothing at either level
-    assert any("goodbye" in s.antonyms for s in interjections)  # meaning-level fallthrough
+    first = entry.senses[0]
+    assert first.part_of_speech == "interjection"
+    assert first.examples == ["Hello, everyone."]
+    assert first.antonyms == []
+    assert entry.senses[3].domains == ["colloquial"]  # sense tags carry the register
 
 
 def test_parse_es_sol():
@@ -68,24 +69,26 @@ def test_parse_es_amar_verb():
     assert entry.senses[1].usage == "rare"
 
 
-# ---- fetch (HTTP mapping) ---------------------------------------------------
+# ---- fetch (HTTP mapping) -------------------------------------------
 
 
 def test_fetch_en_success():
     async def go():
         async with mock_client(lambda req: httpx.Response(200, json=fx("en_hello.json"))) as c:
-            entry, raw = await dictionaryapi.fetch(c, "hello", settings=settings)
+            entry, raw = await freedict.fetch(c, "hello", settings=settings)
         assert entry.word == "hello"
-        assert isinstance(raw, list)
+        assert isinstance(raw, dict)
 
     run(go())
 
 
-def test_fetch_en_not_found():
+def test_fetch_en_not_found_is_200_with_empty_entries():
+    body = {"word": "zzz", "entries": [], "source": {"url": "https://en.wiktionary.org"}}
+
     async def go():
-        async with mock_client(lambda req: httpx.Response(404, json=fx("en_notfound.json"))) as c:
+        async with mock_client(lambda req: httpx.Response(200, json=body)) as c:
             with pytest.raises(WordNotFound) as exc:
-                await dictionaryapi.fetch(c, "zzz", settings=settings)
+                await freedict.fetch(c, "zzz", settings=settings)
         assert exc.value.suggestions == []
 
     run(go())
@@ -95,7 +98,7 @@ def test_fetch_en_server_error():
     async def go():
         async with mock_client(lambda req: httpx.Response(503, text="down")) as c:
             with pytest.raises(SourceError):
-                await dictionaryapi.fetch(c, "hello", settings=settings)
+                await freedict.fetch(c, "hello", settings=settings)
 
     run(go())
 
@@ -135,7 +138,7 @@ def test_fetch_network_error_is_source_error():
     async def go():
         async with mock_client(boom) as c:
             with pytest.raises(SourceError):
-                await dictionaryapi.fetch(c, "hello", settings=settings)
+                await freedict.fetch(c, "hello", settings=settings)
 
     run(go())
 
@@ -152,7 +155,7 @@ def test_fetch_retries_transient_failure(monkeypatch):
 
     async def go():
         async with mock_client(handler) as c:
-            entry, _raw = await dictionaryapi.fetch(c, "hello", settings=settings)
+            entry, _raw = await freedict.fetch(c, "hello", settings=settings)
         assert entry.word == "hello"
         assert calls["n"] == 3
 
@@ -170,7 +173,7 @@ def test_read_timeout_is_not_retried(monkeypatch):
     async def go():
         async with mock_client(handler) as c:
             with pytest.raises(SourceError):
-                await dictionaryapi.fetch(c, "hello", settings=settings)
+                await freedict.fetch(c, "hello", settings=settings)
         assert calls["n"] == 1  # fail fast, no retry
 
     run(go())
@@ -187,7 +190,7 @@ def test_fetch_gives_up_after_retries(monkeypatch):
     async def go():
         async with mock_client(handler) as c:
             with pytest.raises(SourceError):
-                await dictionaryapi.fetch(c, "hello", settings=settings)
+                await freedict.fetch(c, "hello", settings=settings)
         assert calls["n"] == 3  # initial + 2 retries
 
     run(go())
