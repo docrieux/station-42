@@ -72,10 +72,12 @@ def parse(payload: dict[str, Any], word: str) -> Entry:
     etymology: str | None = None
     senses: list[Sense] = []
 
-    for group in data.get("meanings", []):
+    # RAE uses null (not just an absent key) for empty lists, e.g. a homonym
+    # group that only carries `locutions` has `"senses": null`.
+    for group in data.get("meanings") or []:
         if etymology is None:
             etymology = _clean((group.get("origin") or {}).get("raw"))
-        for sense in group.get("senses", []):
+        for sense in group.get("senses") or []:
             senses.append(
                 Sense(
                     number=sense.get("meaning_number"),

@@ -69,6 +69,23 @@ def test_parse_es_amar_verb():
     assert entry.senses[1].usage == "rare"
 
 
+def test_parse_es_tolerates_null_lists():
+    # RAE sends null (not []) for a homonym group that only has locutions,
+    # and can send null for `meanings` itself.
+    payload = {
+        "data": {
+            "word": "pero",
+            "meanings": [
+                {"senses": [{"meaning_number": 1, "category": "noun", "description": "Fruto."}]},
+                {"senses": None, "locutions": [{"expression": "pero que muy", "senses": []}]},
+            ],
+        }
+    }
+    entry = rae.parse(payload, "pero")
+    assert [s.text for s in entry.senses] == ["Fruto."]
+    assert rae.parse({"data": {"word": "x", "meanings": None}}, "x").senses == []
+
+
 # ---- fetch (HTTP mapping) -------------------------------------------
 
 
