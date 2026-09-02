@@ -1,0 +1,18 @@
+---
+# https://gethomepage.dev/configs/bookmarks/
+
+- Admin:
+    - DuckDNS:
+        - abbr: DD
+          href: https://www.duckdns.org/
+    - Tailscale:
+        - abbr: TS
+          href: https://login.tailscale.com/admin/machines
+
+- Reference:
+    - Homepage docs:
+        - abbr: HP
+          href: https://gethomepage.dev/
+    - Repo:
+        - abbr: S42
+          href: https://github.com/docrieux/station-42

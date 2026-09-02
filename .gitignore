@@ -24,6 +24,9 @@ backups/
 infra/caddy/data/
 infra/caddy/config/
 
+# Homepage writes runtime logs into its otherwise-tracked config dir
+services/homepage/config/logs/
+
 # Local-testing Caddy state (internal CA) -- see docs/local-testing.md
 infra/caddy/data-local/
 infra/caddy/config-local/

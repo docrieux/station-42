@@ -22,7 +22,8 @@
 #   8002   wordbook
 #   8003+  new apps
 #   8081   pihole UI
-#   8082+  new services
+#   8082   homepage
+#   8083+  new services
 
 name: station42
 
@@ -36,6 +37,14 @@ services:
   pihole:
     ports:
       - "127.0.0.1:8081:8080"
+
+  homepage:
+    ports:
+      - "127.0.0.1:8082:3000"
+    environment:
+      # Local hostnames only — see Caddyfile.local + direct-port access.
+      HOMEPAGE_ALLOWED_HOSTS: "station42.localhost,localhost:8082"
+      HOMEPAGE_VAR_DOMAIN: station42.localhost
 
   hello:
     ports:

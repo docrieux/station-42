@@ -1,0 +1,21 @@
+---
+# https://gethomepage.dev/configs/widgets/
+# Header widgets (info strip above the service tiles).
+
+- resources:
+    label: Pi
+    cpu: true
+    memory: true
+    disk: /
+    # `disk: /` reads the container rootfs. To report the host SD card instead,
+    # bind-mount it (e.g. - /:/host/root:ro) and set `disk: /host/root`.
+
+- search:
+    provider: duckduckgo
+    target: _blank
+
+- datetime:
+    text_size: xl
+    format:
+      timeStyle: short
+      dateStyle: long

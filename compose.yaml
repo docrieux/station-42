@@ -54,6 +54,23 @@ services:
     networks:
       - edge
 
+  # ---- Homepage (dashboard — the front door, served on the bare domain) --
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      TZ: ${TZ:-UTC}
+      # Homepage rejects any request whose Host header isn't in this list.
+      HOMEPAGE_ALLOWED_HOSTS: ${DUCKDNS_DOMAIN:?set DUCKDNS_DOMAIN in .env}
+      # Substituted into config/*.yaml wherever {{HOMEPAGE_VAR_DOMAIN}} appears.
+      HOMEPAGE_VAR_DOMAIN: ${DUCKDNS_DOMAIN:?set DUCKDNS_DOMAIN in .env}
+    volumes:
+      # Config is tracked in git (services/homepage/config/); logs are gitignored.
+      - ./services/homepage/config:/app/config
+    networks:
+      - edge
+
   # ---- Example custom app (delete once you have real ones) ---------------
   hello:
     build:

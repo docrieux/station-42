@@ -35,6 +35,12 @@
 		reverse_proxy wordbook:8000
 	}
 
+	# ---- Homepage (dashboard — served on the bare local domain) --------
+	@homepage host station42.localhost
+	handle @homepage {
+		reverse_proxy homepage:3000
+	}
+
 	# ---- add new apps above this line ----------------------------------
 
 	# Anything else: simple landing response.

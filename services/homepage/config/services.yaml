@@ -1,0 +1,31 @@
+---
+# https://gethomepage.dev/configs/services/
+# {{HOMEPAGE_VAR_DOMAIN}} is substituted from the HOMEPAGE_VAR_DOMAIN env var
+# (compose.yaml sets it to $DUCKDNS_DOMAIN; compose.local.yaml overrides it).
+# `href` is the public URL through Caddy; `siteMonitor` is the in-network probe
+# Homepage pings itself for the up/down dot.
+
+- Infrastructure:
+    - Pi-hole:
+        href: https://pihole.{{HOMEPAGE_VAR_DOMAIN}}/admin
+        description: Network-wide ad blocking & local DNS
+        icon: pi-hole.png
+        siteMonitor: http://pihole:8080/admin/login.php
+        # Pi-hole v6 widget needs an app password / API token. Put it in .env as
+        # HOMEPAGE_VAR_PIHOLE_KEY, then uncomment:
+        # widget:
+        #   type: pihole
+        #   url: http://pihole:8080
+        #   key: {{HOMEPAGE_VAR_PIHOLE_KEY}}
+
+- Apps:
+    - Wordbook:
+        href: https://wordbook.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Personal Spanish dictionary
+        icon: mdi-book-alphabet
+        siteMonitor: http://wordbook:8000/healthz
+    - Hello:
+        href: https://hello.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Reference app
+        icon: mdi-hand-wave
+        siteMonitor: http://hello:8000/healthz

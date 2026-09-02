@@ -1,0 +1,19 @@
+---
+# https://gethomepage.dev/configs/settings/
+title: Station 42
+description: Self-hosted tools on the Pi
+
+headerStyle: boxed
+theme: dark
+color: slate
+
+# Section order + how each group is laid out.
+layout:
+  Infrastructure:
+    style: row
+    columns: 3
+  Apps:
+    style: row
+    columns: 3
+
+# Homepage is reached over Tailscale only; no auth layer in front of it.
